@@ -1,0 +1,189 @@
+/* ============================================================
+   БАЗА + КОМПОНЕНТЫ (портировано из UI-Kit.html)
+   Классы совпадают с эталоном — экраны используют их напрямую.
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit}
+a{color:inherit;text-decoration:none}
+
+/* ---------- Оболочка приложения ---------- */
+.app-shell{
+  min-height:100dvh;max-width:520px;margin:0 auto;position:relative;
+  display:flex;flex-direction:column;
+}
+.app-body{
+  flex:1;padding:16px 16px calc(var(--tabbar-h) + 24px);overflow-y:auto;
+}
+.app-body.no-tabbar{padding-bottom:24px}
+
+/* ---------- Типографика-утилиты ---------- */
+.h1{font-size:26px;font-weight:800;letter-spacing:-.4px}
+.h2{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.muted{color:var(--muted)}
+.faint{color:var(--faint)}
+.center{text-align:center}
+
+/* ---------- Шапка экрана ---------- */
+.apphead{display:flex;justify-content:space-between;align-items:center;margin:6px 0 16px}
+.apphead .hi{font-size:13px;color:var(--muted)}
+.apphead .mo{font-size:19px;font-weight:800;letter-spacing:-.3px}
+.avatar{width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#34d399,#0ea5a0);
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--on-accent);font-size:14px}
+
+/* ---------- Кнопки ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:800;
+  padding:13px 18px;border-radius:var(--r-md);font-size:15px;border:1px solid transparent;
+  cursor:pointer;text-align:center;width:100%}
+.btn-primary{background:var(--green);color:var(--on-accent);box-shadow:var(--sh-glow)}
+.btn-secondary{background:var(--card2);color:var(--text);border-color:var(--line)}
+.btn-ghost{background:transparent;color:var(--muted);border-color:var(--line)}
+.btn-danger{background:var(--over-dim);color:var(--over);border-color:var(--over)}
+.btn:disabled,.btn.is-disabled{opacity:.4;box-shadow:none;cursor:not-allowed}
+.btn-sm{padding:8px 12px;font-size:13px;width:auto}
+
+/* ---------- Сегмент-контрол (нейтральный) ---------- */
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);padding:4px}
+.seg .s{flex:1;text-align:center;font-size:13px;font-weight:700;padding:8px;border-radius:9px;
+  color:var(--muted);cursor:pointer;background:none;border:none}
+.seg .s.on{background:var(--card2);color:var(--text);box-shadow:var(--sh-card)}
+
+/* ---------- Поля ввода ---------- */
+.field{background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;
+  display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);
+  cursor:pointer;width:100%;text-align:left}
+.field .val{color:var(--text)}
+.field.on{border-color:var(--green);background:var(--green-dim)}
+.field.on .val{color:var(--green)}
+.input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:12px 14px;font-size:14px;color:var(--text);font-family:inherit}
+.input::placeholder{color:var(--faint)}
+.input:focus{outline:none;border-color:var(--green)}
+
+/* ---------- Сумма-инпут ---------- */
+.amount-in{text-align:center;padding:8px 0}
+.amount-in .a{font-size:40px;font-weight:800;letter-spacing:-1px}
+.amount-in .c{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ---------- Чипы категорий ---------- */
+.grid-cat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cchip{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 6px;
+  text-align:center;font-size:11px;cursor:pointer;color:var(--text)}
+.cchip.on{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.cchip .e{font-size:18px;display:block;margin-bottom:5px}
+
+/* ---------- Бейджи ---------- */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
+  padding:4px 10px;border-radius:var(--r-pill)}
+.badge.ok{background:var(--ok-dim);color:var(--ok)}
+.badge.warn{background:var(--warn-dim);color:var(--warn)}
+.badge.over{background:var(--over-dim);color:var(--over)}
+.badge.neutral{background:var(--card2);color:var(--muted);border:1px solid var(--line)}
+
+/* ---------- Карточки ---------- */
+.hero{background:linear-gradient(150deg,#1f3b32,#232019);border:1px solid #2f5147;
+  border-radius:var(--r-lg);padding:18px;margin-bottom:14px}
+.hero .lbl{font-size:12.5px;color:#9fe6cb}
+.hero .big{font-size:34px;font-weight:800;letter-spacing:-1px;margin-top:4px}
+.hero .big small{font-size:18px;font-weight:700}
+.hero .meta{font-size:12px;color:var(--muted);margin-top:6px}
+
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 8px;text-align:center}
+.mini .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.mini .v{font-size:14.5px;font-weight:800;margin-top:3px}
+.v.g{color:var(--ok)} .v.r{color:var(--over)} .v.a{color:var(--warn)}
+
+.block{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 15px;margin-bottom:12px}
+.block h3{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between}
+
+/* ---------- Прогресс-бар (светофор) ---------- */
+.bar{height:6px;border-radius:6px;background:#332e26;overflow:hidden;margin-top:5px}
+.bar>i{display:block;height:100%;border-radius:6px}
+.fill-g{background:var(--ok)} .fill-a{background:var(--warn)} .fill-r{background:var(--over)}
+
+/* ---------- Строка категории ---------- */
+.catrow{display:flex;align-items:center;gap:10px;margin:11px 0 0}
+.catrow .ic{font-size:16px;width:20px;text-align:center}
+.catrow .nm{flex:1;font-size:13px}
+.catrow .am{font-size:12.5px;font-weight:700;color:var(--muted)}
+
+/* ---------- Строка операции ---------- */
+.txrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.txrow:last-child{border-bottom:0}
+.txrow .tic{width:38px;height:38px;border-radius:11px;background:var(--card2);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.txrow .tmid{flex:1;min-width:0}
+.txrow .tname{font-size:13.5px;font-weight:600}
+.txrow .tmeta{font-size:11.5px;color:var(--faint);margin-top:2px}
+.txrow .tamt{font-size:14px;font-weight:800;white-space:nowrap}
+.txrow .tamt.plus{color:var(--ok)}
+.tx-del{background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;padding:4px 2px 4px 8px}
+.tx-del:active{color:var(--over)}
+
+/* ---------- Donut + легенда ---------- */
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut{width:104px;height:104px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;position:relative}
+.donut::after{content:"";position:absolute;width:66px;height:66px;border-radius:50%;background:var(--card)}
+.donut .tot{position:relative;z-index:2;text-align:center}
+.donut .tot b{font-size:14px;font-weight:800;display:block}
+.donut .tot s{font-size:9px;color:var(--muted);text-decoration:none}
+.lg{flex:1}
+.lg .li{display:flex;align-items:center;gap:8px;font-size:11.5px;margin:6px 0}
+.lg .dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+
+/* ---------- Таббар + FAB ---------- */
+.tabbar{position:fixed;left:0;right:0;bottom:0;height:var(--tabbar-h);z-index:40;
+  max-width:520px;margin:0 auto;
+  background:var(--bg2);border-top:1px solid var(--line);
+  display:flex;justify-content:space-around;align-items:center;
+  padding-bottom:env(safe-area-inset-bottom)}
+.tabbar .t{font-size:10px;color:var(--faint);text-align:center;display:flex;flex-direction:column;
+  gap:3px;background:none;border:none;cursor:pointer;flex:1;padding:6px 0}
+.tabbar .t .i{font-size:18px}
+.tabbar .t.on{color:var(--green)}
+.fab{position:fixed;right:calc(50% - 260px + 18px);bottom:calc(var(--tabbar-h) + 16px);z-index:41;
+  width:56px;height:56px;border-radius:50%;background:var(--green);color:var(--on-accent);
+  font-size:30px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--sh-glow)}
+@media (max-width:520px){.fab{right:18px}}
+
+/* ---------- Обратная связь ---------- */
+.toast{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:12px 14px;font-size:13px;box-shadow:var(--sh-pop)}
+.toast.ok{border-color:var(--ok)} .toast.ok .ti{color:var(--ok)}
+.toast.over{border-color:var(--over)} .toast.over .ti{color:var(--over)}
+.toast .ti{font-size:16px}
+
+/* ---------- Состояния ---------- */
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}
+.empty .em{font-size:40px;margin-bottom:10px}
+.empty .et{font-size:15px;font-weight:700;color:var(--text)}
+.empty .es{font-size:13px;margin-top:5px}
+
+.sk{background:linear-gradient(90deg,var(--card) 25%,var(--card2) 37%,var(--card) 63%);
+  background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:8px}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.sk-line{height:12px}
+
+/* ---------- Строка бюджета (кнопка) ---------- */
+.budget-row{display:block;width:100%;background:none;border:none;padding:0;cursor:pointer;text-align:left}
+.budget-row + .budget-row{margin-top:6px}
+
+/* ---------- Затемнение + bottom-sheet ---------- */
+.scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);
+  display:flex;flex-direction:column;justify-content:flex-end;
+  max-width:520px;margin:0 auto}
+.scrim .sheet{animation:sheet-up .18s ease-out}
+@keyframes sheet-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* ---------- Модальный экран (Добавить) ---------- */
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin:6px 0 16px}
+.modal-head .close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer}
+.crumbs{font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer}
