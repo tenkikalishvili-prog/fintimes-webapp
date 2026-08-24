@@ -30,7 +30,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 function safeInitData(): string {
   try {
-    return WebApp.initData ?? ''
+    // Приоритет — официальный объект от telegram-web-app.js (заполняется из
+    // параметров запуска). Фолбэк — @twa-dev/sdk.
+    const w = window as unknown as { Telegram?: { WebApp?: { initData?: string } } }
+    return w.Telegram?.WebApp?.initData || WebApp.initData || ''
   } catch {
     return ''
   }
