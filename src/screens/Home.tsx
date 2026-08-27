@@ -67,6 +67,15 @@ export function Home() {
             </div>
           </div>
 
+          {(me.data?.plannedIncome || me.data?.plannedSpending) && (
+            <div className="plan-note">
+              💡 План на месяц:
+              {me.data?.plannedIncome ? ` доход ${compact(me.data.plannedIncome)} ₽` : ''}
+              {me.data?.plannedIncome && me.data?.plannedSpending ? ' ·' : ''}
+              {me.data?.plannedSpending ? ` траты ${compact(me.data.plannedSpending)} ₽` : ''}
+            </div>
+          )}
+
           <div className="block">
             <h3>
               Топ трат <span>потрачено / бюджет</span>

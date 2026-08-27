@@ -18,6 +18,18 @@ export interface Me {
   name: string
   currency: string
   theme: string
+  /** true → показать мастер первого входа (онбординг ещё не пройден). */
+  needsOnboarding: boolean
+  /** Плановый доход в месяц (с онбординга), ₽. null — не задан. */
+  plannedIncome: number | null
+  /** Общий месячный лимит на «Траты» (с онбординга), ₽. null — не задан. */
+  plannedSpending: number | null
+}
+
+/** Данные лёгкого мастера онбординга: доход + общий лимит трат. */
+export interface OnboardingInput {
+  monthlyIncome?: number
+  monthlySpending?: number
 }
 
 export interface TopSpend {

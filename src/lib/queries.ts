@@ -7,6 +7,7 @@ import type {
   BudgetLine,
   CategoryGroup,
   Me,
+  OnboardingInput,
   Overview,
   Transaction,
   TransactionInput,
@@ -90,6 +91,18 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: (id: number) => api.del<void>(`/api/transactions/${id}`),
     onSuccess: () => invalidateMoney(qc),
+  })
+}
+
+/** Завершение лёгкого онбординга: сохраняет доход и лимит трат, обновляет /me и суммы. */
+export function useCompleteOnboarding() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: OnboardingInput) => api.post<Me>('/api/onboarding', body),
+    onSuccess: (me) => {
+      qc.setQueryData(keys.me, me)
+      invalidateMoney(qc)
+    },
   })
 }
 
