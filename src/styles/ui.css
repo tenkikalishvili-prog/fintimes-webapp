@@ -178,12 +178,35 @@ a{color:inherit;text-decoration:none}
 .budget-row{display:block;width:100%;background:none;border:none;padding:0;cursor:pointer;text-align:left}
 .budget-row + .budget-row{margin-top:6px}
 
+/* ---------- Бюджет: карусель категорий ---------- */
+.bcat-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.bcat-tabs::-webkit-scrollbar{display:none}
+.bcat-chip{flex:0 0 auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r-pill);
+  padding:7px 14px;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
+.bcat-chip.on{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.bcar{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;
+  margin:0 -2px}
+.bcar::-webkit-scrollbar{display:none}
+.bcar-panel{flex:0 0 100%;scroll-snap-align:start;padding:0 2px;align-self:flex-start}
+.bgroup-sum{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
+.bgroup-sum b{font-size:14px;color:var(--text)}
+.bcat-dots{display:flex;gap:6px;justify-content:center;margin-top:4px}
+.bcat-dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.bcat-dots i.on{background:var(--green)}
+
 /* ---------- Затемнение + bottom-sheet ---------- */
 .scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);
   display:flex;flex-direction:column;justify-content:flex-end;
   max-width:520px;margin:0 auto}
 .scrim .sheet{animation:sheet-up .18s ease-out}
 @keyframes sheet-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet{background:var(--bg2);border-top-left-radius:20px;border-top-right-radius:20px;
+  border-top:1px solid var(--line);padding:8px 16px calc(20px + env(safe-area-inset-bottom));
+  box-shadow:var(--sh-pop)}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 14px}
+.sheet h4{font-size:15px;font-weight:800;margin:0 0 16px}
+.sheet-label{display:block;font-size:12px;color:var(--faint);margin-bottom:6px}
+.sheet-label .muted{font-weight:400}
 
 /* ---------- Модальный экран (Добавить) ---------- */
 .modal-head{display:flex;justify-content:space-between;align-items:center;margin:6px 0 16px}

@@ -1,18 +1,44 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { budgetStatus, compact, fillClass, money } from '../lib/format'
-import { useBudget, useSetBudget } from '../lib/queries'
+import { useBudgetOverview, useSetBudget, useRenameSubcategory } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { haptic } from '../lib/telegram'
-import type { BudgetLine } from '../types'
+import { ApiError } from '../lib/api'
+import type { BudgetGroupView, BudgetSub } from '../types'
 
 export function Budget() {
-  const { data, isPending, isError, refetch } = useBudget()
-  const [editing, setEditing] = useState<BudgetLine | null>(null)
+  const { data, isPending, isError, refetch } = useBudgetOverview()
+  const [active, setActive] = useState(0)
+  const [editing, setEditing] = useState<BudgetSub | null>(null)
+  const carRef = useRef<HTMLDivElement>(null)
+  const chipRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  // Активную вкладку-чип держим в поле зрения при свайпе.
+  useEffect(() => {
+    chipRefs.current[active]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }, [active])
+
+  // Тап по чипу — мгновенный переход к панели. Плавный smooth-scroll на
+  // scroll-snap:mandatory-контейнере ненадёжен (снап отменяет анимацию),
+  // а свайп пальцем и так плавный (нативный). Прямое присваивание scrollLeft надёжно.
+  const goto = (i: number) => {
+    haptic('light')
+    const el = carRef.current
+    if (el) el.scrollLeft = i * el.clientWidth
+    setActive(i)
+  }
+
+  const onScroll = () => {
+    const el = carRef.current
+    if (!el) return
+    const i = Math.round(el.scrollLeft / el.clientWidth)
+    if (i !== active) setActive(i)
+  }
 
   return (
     <>
       <header className="apphead">
-        <div className="mo">Бюджет · Траты</div>
+        <div className="mo">Бюджет</div>
       </header>
 
       {isPending ? (
@@ -21,89 +47,157 @@ export function Budget() {
         <ErrorState onRetry={refetch} />
       ) : data.length === 0 ? (
         <div className="block">
-          <EmptyState emoji="🎯" title="Бюджеты не заданы" sub="Лимиты по группе «Траты» появятся здесь" />
+          <EmptyState emoji="🎯" title="Категорий пока нет" sub="Появятся после первого входа" />
         </div>
       ) : (
         <>
-          <div className="block">
-            {data.map((line) => {
-              const st = budgetStatus(line.spent, line.limit)
-              const pct = line.limit > 0 ? Math.min(100, Math.round((line.spent / line.limit) * 100)) : 0
-              return (
-                <button
-                  key={line.subcategoryId}
-                  className="budget-row"
-                  onClick={() => {
-                    haptic('light')
-                    setEditing(line)
-                  }}
-                >
-                  <div className="catrow">
-                    <span className="ic">{line.emoji}</span>
-                    <span className="nm">{line.name}</span>
-                    <span className="am">
-                      {compact(line.spent)} / {compact(line.limit)} ✎
-                    </span>
-                  </div>
-                  <div className="bar">
-                    <i className={fillClass[st]} style={{ width: `${pct}%` }} />
-                  </div>
-                </button>
-              )
-            })}
+          {/* Вкладки-чипы категорий (тап или свайп ниже) */}
+          <div className="bcat-tabs">
+            {data.map((g, i) => (
+              <button
+                key={g.group}
+                ref={(el) => { chipRefs.current[i] = el }}
+                className={`bcat-chip${i === active ? ' on' : ''}`}
+                onClick={() => goto(i)}
+              >
+                {g.emoji ? `${g.emoji} ` : ''}{g.group}
+              </button>
+            ))}
           </div>
 
-          <div className="block center muted" style={{ fontSize: 12 }}>
-            Итого траты: <b style={{ color: 'var(--text)' }}>{compact(sum(data, 'spent'))}</b> из{' '}
-            <b style={{ color: 'var(--text)' }}>{compact(sum(data, 'limit'))}</b>
+          {/* Карусель: одна «страница» = категория со своими подкатегориями */}
+          <div className="bcar" ref={carRef} onScroll={onScroll}>
+            {data.map((g) => (
+              <CategoryPanel key={g.group} group={g} onEdit={setEditing} />
+            ))}
+          </div>
+
+          <div className="bcat-dots" aria-hidden>
+            {data.map((g, i) => (
+              <i key={g.group} className={i === active ? 'on' : ''} />
+            ))}
           </div>
         </>
       )}
 
-      {editing && <EditBudgetSheet line={editing} onClose={() => setEditing(null)} />}
+      {editing && <EditSheet sub={editing} onClose={() => setEditing(null)} />}
     </>
   )
 }
 
-function sum(lines: BudgetLine[], key: 'spent' | 'limit'): number {
-  return lines.reduce((s, l) => s + l[key], 0)
+function CategoryPanel({ group, onEdit }: { group: BudgetGroupView; onEdit: (s: BudgetSub) => void }) {
+  const st = budgetStatus(group.spent, group.limit)
+  const pct = group.limit > 0 ? Math.min(100, Math.round((group.spent / group.limit) * 100)) : 0
+  const noLimits = group.limit === 0
+  return (
+    <div className="bcar-panel">
+      <div className="block">
+        <div className="bgroup-sum">
+          <span>Итого по категории</span>
+          <b>
+            {compact(group.spent)}
+            {group.limit > 0 ? ` / ${compact(group.limit)}` : ''}
+          </b>
+        </div>
+        {group.limit > 0 && (
+          <div className="bar" style={{ marginTop: 8 }}>
+            <i className={fillClass[st]} style={{ width: `${pct}%` }} />
+          </div>
+        )}
+      </div>
+
+      <div className="block">
+        {noLimits && (
+          <p className="muted" style={{ fontSize: 12, margin: '0 0 10px' }}>
+            Лимиты не заданы. Нажми на подкатегорию, чтобы задать лимит или переименовать её.
+          </p>
+        )}
+        {group.subcategories.map((sub) => {
+          const s = budgetStatus(sub.spent, sub.limit)
+          const p = sub.limit > 0 ? Math.min(100, Math.round((sub.spent / sub.limit) * 100)) : 0
+          return (
+            <button
+              key={sub.subcategoryId}
+              className="budget-row"
+              onClick={() => { haptic('light'); onEdit(sub) }}
+            >
+              <div className="catrow">
+                <span className="ic">{sub.emoji}</span>
+                <span className="nm">{sub.name}</span>
+                <span className="am">
+                  {sub.limit > 0 ? `${compact(sub.spent)} / ${compact(sub.limit)}` : `${compact(sub.spent)} · без лимита`} ✎
+                </span>
+              </div>
+              {sub.limit > 0 && (
+                <div className="bar">
+                  <i className={fillClass[s]} style={{ width: `${p}%` }} />
+                </div>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
-function EditBudgetSheet({ line, onClose }: { line: BudgetLine; onClose: () => void }) {
-  const [amount, setAmount] = useState(String(Math.round(line.limit)))
+function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
+  const [name, setName] = useState(sub.name)
+  const [amount, setAmount] = useState(sub.limit > 0 ? String(Math.round(sub.limit)) : '')
+  const [err, setErr] = useState<string | null>(null)
+  const rename = useRenameSubcategory()
   const setBudget = useSetBudget()
+  const pending = rename.isPending || setBudget.isPending
 
-  const save = () => {
-    const value = Number(amount)
-    if (!Number.isFinite(value) || value < 0) return
-    setBudget.mutate(
-      { categoryId: line.subcategoryId, amount: value },
-      {
-        onSuccess: () => {
-          haptic('medium')
-          onClose()
-        },
-      },
-    )
+  const save = async () => {
+    const nm = name.trim()
+    const amt = Number(amount || 0)
+    if (!nm) { setErr('Название не может быть пустым'); return }
+    if (!Number.isFinite(amt) || amt < 0) { setErr('Лимит должен быть числом ≥ 0'); return }
+    setErr(null)
+    try {
+      if (nm !== sub.name) await rename.mutateAsync({ id: sub.subcategoryId, name: nm })
+      if (amt !== Math.round(sub.limit)) await setBudget.mutateAsync({ categoryId: sub.subcategoryId, amount: amt })
+      haptic('medium')
+      onClose()
+    } catch (e) {
+      setErr(e instanceof ApiError && e.status === 400 ? 'Такое название уже есть в этой категории' : 'Не удалось сохранить')
+    }
   }
 
   return (
     <div className="scrim" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
-        <h4>
-          {line.emoji} {line.name} · лимит
-        </h4>
+        <h4>{sub.emoji ? `${sub.emoji} ` : ''}Подкатегория</h4>
+
+        <label className="sheet-label">Название</label>
+        <input
+          className="input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={{ marginBottom: 14 }}
+        />
+
+        <label className="sheet-label">Лимит в месяц, ₽ <span className="muted">(0 — без лимита)</span></label>
         <input
           className="input"
           inputMode="numeric"
-          autoFocus
+          placeholder="0"
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: 14 }}
         />
-        <button className="btn btn-primary" disabled={setBudget.isPending} onClick={save}>
-          {setBudget.isPending ? 'Сохраняю…' : `Сохранить · ${money(Number(amount || 0))}`}
+
+        {err && (
+          <div className="toast over" style={{ marginBottom: 12 }}>
+            <span className="ti">⚠️</span>
+            <span>{err}</span>
+          </div>
+        )}
+
+        <button className="btn btn-primary" disabled={pending} onClick={save}>
+          {pending ? 'Сохраняю…' : `Сохранить · ${money(Number(amount || 0))}`}
         </button>
       </div>
     </div>

@@ -89,6 +89,24 @@ export interface BudgetLine {
   limit: number
 }
 
+/** Подкатегория в обзоре бюджета (без group — она задаётся родительской группой). */
+export interface BudgetSub {
+  subcategoryId: number
+  name: string
+  emoji: string | null
+  spent: number
+  limit: number
+}
+
+/** Категория (группа) с её подкатегориями — «страница» карусели в разделе «Бюджет». */
+export interface BudgetGroupView {
+  group: string
+  emoji: string | null
+  spent: number
+  limit: number
+  subcategories: BudgetSub[]
+}
+
 export interface Subcategory {
   id: number
   name: string

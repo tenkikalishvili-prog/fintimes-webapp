@@ -4,6 +4,7 @@ import { api } from './api'
 import type {
   Analytics,
   Article,
+  BudgetGroupView,
   BudgetLine,
   CategoryGroup,
   Me,
@@ -11,6 +12,7 @@ import type {
   NotificationSettingsInput,
   OnboardingInput,
   Overview,
+  Subcategory,
   Transaction,
   TransactionInput,
 } from '../types'
@@ -27,6 +29,7 @@ export const keys = {
   overview: (month?: string) => ['overview', month ?? 'current'] as const,
   analytics: (month?: string) => ['analytics', month ?? 'current'] as const,
   budget: (month?: string, group?: string) => ['budget', month ?? 'current', group ?? 'Траты'] as const,
+  budgetOverview: (month?: string) => ['budget-overview', month ?? 'current'] as const,
   categories: (article: Article) => ['categories', article] as const,
   transactions: (month?: string) => ['transactions', month ?? 'all'] as const,
   settings: ['settings'] as const,
@@ -58,6 +61,14 @@ export function useBudget(month?: string, group?: string) {
   })
 }
 
+/** Полный обзор бюджета: все категории со своими подкатегориями (для карусели). */
+export function useBudgetOverview(month?: string) {
+  return useQuery({
+    queryKey: keys.budgetOverview(month),
+    queryFn: () => api.get<BudgetGroupView[]>(`/api/budget/overview${qs({ month })}`),
+  })
+}
+
 export function useCategories(article: Article) {
   return useQuery({
     queryKey: keys.categories(article),
@@ -78,6 +89,7 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['overview'] })
   qc.invalidateQueries({ queryKey: ['analytics'] })
   qc.invalidateQueries({ queryKey: ['budget'] })
+  qc.invalidateQueries({ queryKey: ['budget-overview'] })
   qc.invalidateQueries({ queryKey: ['transactions'] })
 }
 
@@ -133,5 +145,18 @@ export function useSetBudget() {
     mutationFn: ({ categoryId, amount }: { categoryId: number; amount: number }) =>
       api.patch<BudgetLine>(`/api/budget/${categoryId}`, { amount }),
     onSuccess: () => invalidateMoney(qc),
+  })
+}
+
+/** Переименование подкатегории. Меняет название везде (id не трогается). */
+export function useRenameSubcategory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) =>
+      api.patch<Subcategory>(`/api/categories/${id}`, { name }),
+    onSuccess: () => {
+      invalidateMoney(qc)
+      qc.invalidateQueries({ queryKey: ['categories'] })
+    },
   })
 }
