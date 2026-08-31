@@ -1,7 +1,6 @@
-import { Link } from 'react-router-dom'
-import { getUserName } from '../lib/telegram'
+import { getUserName, haptic } from '../lib/telegram'
 import { compact, money, budgetStatus, fillClass, formatTxDate } from '../lib/format'
-import { useMe, useOverview, useTransactions } from '../lib/queries'
+import { useMe, useOverview, useTransactions, useDeleteTransaction } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 
 const MONTHS = [
@@ -20,6 +19,7 @@ export function Home() {
   const me = useMe()
   const { data, isPending, isError, refetch } = useOverview()
   const tx = useTransactions()
+  const del = useDeleteTransaction()
   const name = me.data?.name?.split(' ')[0] || getUserName()
 
   return (
@@ -109,10 +109,7 @@ export function Home() {
           </div>
 
           <div className="block">
-            <h3>
-              Последние операции
-              {tx.data && tx.data.length > 0 && <Link to="/more" className="seeall">Все →</Link>}
-            </h3>
+            <h3>Последние операции</h3>
             {tx.isPending ? (
               <SkeletonBlock rows={3} />
             ) : tx.isError ? (
@@ -134,6 +131,16 @@ export function Home() {
                     {t.article === 'income' ? '+' : '−'}
                     {money(t.amount).replace('−', '')}
                   </div>
+                  <button
+                    className="tx-del"
+                    aria-label="Удалить"
+                    onClick={() => {
+                      haptic('medium')
+                      if (confirm(`Удалить «${t.subcategoryName} ${money(t.amount)}»?`)) del.mutate(t.id)
+                    }}
+                  >
+                    ✕
+                  </button>
                 </div>
               ))
             )}
