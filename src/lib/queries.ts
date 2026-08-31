@@ -160,3 +160,16 @@ export function useRenameSubcategory() {
     },
   })
 }
+
+/** Переименование категории (группы) — меняет её у всех подкатегорий. */
+export function useRenameGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
+      api.patch<{ group: string; renamed: number }>('/api/categories/group', { oldName, newName }),
+    onSuccess: () => {
+      invalidateMoney(qc)
+      qc.invalidateQueries({ queryKey: ['categories'] })
+    },
+  })
+}

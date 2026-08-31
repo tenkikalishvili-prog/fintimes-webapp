@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { budgetStatus, compact, fillClass, money } from '../lib/format'
-import { useBudgetOverview, useSetBudget, useRenameSubcategory } from '../lib/queries'
+import { useBudgetOverview, useSetBudget, useRenameSubcategory, useRenameGroup } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { haptic } from '../lib/telegram'
 import { ApiError } from '../lib/api'
@@ -10,6 +10,7 @@ export function Budget() {
   const { data, isPending, isError, refetch } = useBudgetOverview()
   const [active, setActive] = useState(0)
   const [editing, setEditing] = useState<BudgetSub | null>(null)
+  const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const carRef = useRef<HTMLDivElement>(null)
 
   // Тап по точке — мгновенный переход к панели. Плавный smooth-scroll на
@@ -49,7 +50,7 @@ export function Budget() {
               Название категории — заголовком внутри блока итога. Свайп + точки. */}
           <div className="bcar" ref={carRef} onScroll={onScroll}>
             {data.map((g) => (
-              <CategoryPanel key={g.group} group={g} onEdit={setEditing} />
+              <CategoryPanel key={g.group} group={g} onEdit={setEditing} onEditGroup={setEditingGroup} />
             ))}
           </div>
 
@@ -69,21 +70,33 @@ export function Budget() {
       )}
 
       {editing && <EditSheet sub={editing} onClose={() => setEditing(null)} />}
+      {editingGroup !== null && (
+        <GroupSheet group={editingGroup} onClose={() => setEditingGroup(null)} />
+      )}
     </>
   )
 }
 
-function CategoryPanel({ group, onEdit }: { group: BudgetGroupView; onEdit: (s: BudgetSub) => void }) {
+function CategoryPanel({
+  group,
+  onEdit,
+  onEditGroup,
+}: {
+  group: BudgetGroupView
+  onEdit: (s: BudgetSub) => void
+  onEditGroup: (g: string) => void
+}) {
   const st = budgetStatus(group.spent, group.limit)
   const pct = group.limit > 0 ? Math.min(100, Math.round((group.spent / group.limit) * 100)) : 0
   const noLimits = group.limit === 0
   return (
     <div className="bcar-panel">
       <div className="block">
-        <div className="bgroup-head">
+        <button className="bgroup-head" onClick={() => { haptic('light'); onEditGroup(group.group) }}>
           <span className="bgroup-ic">{group.emoji}</span>
-          {group.group}
-        </div>
+          <span className="bgroup-name">{group.group}</span>
+          <span className="bgroup-edit">✎</span>
+        </button>
         <div className="bgroup-sum">
           <span>Итого по категории</span>
           <b>
@@ -190,6 +203,52 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
 
         <button className="btn btn-primary" disabled={pending} onClick={save}>
           {pending ? 'Сохраняю…' : `Сохранить · ${money(Number(amount || 0))}`}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function GroupSheet({ group, onClose }: { group: string; onClose: () => void }) {
+  const [name, setName] = useState(group)
+  const [err, setErr] = useState<string | null>(null)
+  const rename = useRenameGroup()
+
+  const save = async () => {
+    const nm = name.trim()
+    if (!nm) { setErr('Название не может быть пустым'); return }
+    if (nm === group) { onClose(); return }
+    setErr(null)
+    try {
+      await rename.mutateAsync({ oldName: group, newName: nm })
+      haptic('medium')
+      onClose()
+    } catch (e) {
+      setErr(e instanceof ApiError && e.status === 400 ? 'Категория с таким названием уже есть' : 'Не удалось сохранить')
+    }
+  }
+
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grab" />
+        <h4>Название категории</h4>
+        <label className="sheet-label">Переименование затронет все подкатегории внутри</label>
+        <input
+          className="input"
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={{ marginBottom: 14 }}
+        />
+        {err && (
+          <div className="toast over" style={{ marginBottom: 12 }}>
+            <span className="ti">⚠️</span>
+            <span>{err}</span>
+          </div>
+        )}
+        <button className="btn btn-primary" disabled={rename.isPending} onClick={save}>
+          {rename.isPending ? 'Сохраняю…' : 'Сохранить'}
         </button>
       </div>
     </div>
