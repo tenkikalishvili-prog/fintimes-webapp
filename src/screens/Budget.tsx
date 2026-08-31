@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { budgetStatus, compact, fillClass, money } from '../lib/format'
 import { useBudgetOverview, useSetBudget, useRenameSubcategory } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
@@ -11,14 +11,8 @@ export function Budget() {
   const [active, setActive] = useState(0)
   const [editing, setEditing] = useState<BudgetSub | null>(null)
   const carRef = useRef<HTMLDivElement>(null)
-  const chipRefs = useRef<(HTMLButtonElement | null)[]>([])
 
-  // Активную вкладку-чип держим в поле зрения при свайпе.
-  useEffect(() => {
-    chipRefs.current[active]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-  }, [active])
-
-  // Тап по чипу — мгновенный переход к панели. Плавный smooth-scroll на
+  // Тап по точке — мгновенный переход к панели. Плавный smooth-scroll на
   // scroll-snap:mandatory-контейнере ненадёжен (снап отменяет анимацию),
   // а свайп пальцем и так плавный (нативный). Прямое присваивание scrollLeft надёжно.
   const goto = (i: number) => {
@@ -51,32 +45,26 @@ export function Budget() {
         </div>
       ) : (
         <>
-          {/* Вкладки-чипы категорий (тап или свайп ниже) */}
-          <div className="bcat-tabs">
-            {data.map((g, i) => (
-              <button
-                key={g.group}
-                ref={(el) => { chipRefs.current[i] = el }}
-                className={`bcat-chip${i === active ? ' on' : ''}`}
-                onClick={() => goto(i)}
-              >
-                {g.emoji ? `${g.emoji} ` : ''}{g.group}
-              </button>
-            ))}
-          </div>
-
-          {/* Карусель: одна «страница» = категория со своими подкатегориями */}
+          {/* Карусель: одна «страница» = категория со своими подкатегориями.
+              Название категории — заголовком внутри блока итога. Свайп + точки. */}
           <div className="bcar" ref={carRef} onScroll={onScroll}>
             {data.map((g) => (
               <CategoryPanel key={g.group} group={g} onEdit={setEditing} />
             ))}
           </div>
 
-          <div className="bcat-dots" aria-hidden>
-            {data.map((g, i) => (
-              <i key={g.group} className={i === active ? 'on' : ''} />
-            ))}
-          </div>
+          {data.length > 1 && (
+            <div className="bcat-dots">
+              {data.map((g, i) => (
+                <button
+                  key={g.group}
+                  className={i === active ? 'on' : ''}
+                  aria-label={`К категории «${g.group}»`}
+                  onClick={() => goto(i)}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -92,6 +80,10 @@ function CategoryPanel({ group, onEdit }: { group: BudgetGroupView; onEdit: (s: 
   return (
     <div className="bcar-panel">
       <div className="block">
+        <div className="bgroup-head">
+          <span className="bgroup-ic">{group.emoji}</span>
+          {group.group}
+        </div>
         <div className="bgroup-sum">
           <span>Итого по категории</span>
           <b>
