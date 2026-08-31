@@ -224,9 +224,10 @@ a{color:inherit;text-decoration:none}
 .del-note{font-size:12px;color:var(--faint);margin:14px 0 8px;line-height:1.4}
 .del-row{display:flex;gap:10px}
 .del-row .btn{flex:1}
-/* «Новая категория» — компактная, слева, чтобы не пересекаться с плавающей «+» */
-.newgroup-row{display:flex;margin-top:14px;padding-bottom:8px}
-.newgroup-btn{width:auto;font-size:14px;padding:11px 16px}
+/* «Новая категория» — во всю ширину (как карточки). Запас снизу, чтобы при
+   длинном списке кнопку можно было прокрутить выше плавающей «+» (FAB). */
+.newgroup-row{display:flex;margin-top:14px;padding-bottom:88px}
+.newgroup-btn{width:100%}
 
 /* ---------- Модальный экран (Добавить) ---------- */
 .modal-head{display:flex;justify-content:space-between;align-items:center;margin:6px 0 16px}
