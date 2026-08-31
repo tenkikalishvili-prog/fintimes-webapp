@@ -1,9 +1,11 @@
-import { money } from '../lib/format'
+import { useNavigate } from 'react-router-dom'
+import { money, formatTxDate } from '../lib/format'
 import { useMe, useTransactions, useDeleteTransaction } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { isTelegram, haptic } from '../lib/telegram'
 
 export function More() {
+  const navigate = useNavigate()
   const me = useMe()
   const { data, isPending, isError, refetch } = useTransactions()
   const del = useDeleteTransaction()
@@ -13,6 +15,18 @@ export function More() {
       <header className="apphead">
         <div className="mo">Ещё</div>
       </header>
+
+      <button
+        className="field"
+        onClick={() => {
+          haptic('light')
+          navigate('/settings')
+        }}
+        style={{ marginBottom: 12 }}
+      >
+        <span>🔔 Уведомления</span>
+        <span className="val">Настроить ›</span>
+      </button>
 
       <div className="block">
         <h3>Последние операции</h3>
@@ -30,7 +44,7 @@ export function More() {
                 <div className="tname">{t.subcategoryName}</div>
                 <div className="tmeta">
                   {t.categoryName}
-                  {t.comment ? ` · ${t.comment}` : ''} · {formatDate(t.date)}
+                  {t.comment ? ` · ${t.comment}` : ''} · {formatTxDate(t.date)}
                 </div>
               </div>
               <div className={`tamt${t.article === 'income' ? ' plus' : ''}`}>
@@ -65,17 +79,4 @@ export function More() {
       </div>
     </>
   )
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  const today = new Date()
-  const y = new Date(today.getTime() - 864e5)
-  if (sameDay(d, today)) return 'сегодня'
-  if (sameDay(d, y)) return 'вчера'
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-}
-
-function sameDay(a: Date, b: Date): boolean {
-  return a.toDateString() === b.toDateString()
 }

@@ -32,6 +32,24 @@ export interface OnboardingInput {
   monthlySpending?: number
 }
 
+/** Настройки уведомлений бота. Час — по часовому поясу пользователя. */
+export interface NotificationSettings {
+  timezone: string
+  morningEnabled: boolean
+  morningHour: number
+  eveningEnabled: boolean
+  eveningHour: number
+}
+
+/** Частичное обновление настроек уведомлений (любое поле опционально). */
+export interface NotificationSettingsInput {
+  timezone?: string
+  morningEnabled?: boolean
+  morningHour?: number
+  eveningEnabled?: boolean
+  eveningHour?: number
+}
+
 export interface TopSpend {
   subcategoryId: number
   name: string

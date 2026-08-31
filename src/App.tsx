@@ -5,6 +5,7 @@ import { Analytics } from './screens/Analytics'
 import { Budget } from './screens/Budget'
 import { More } from './screens/More'
 import { AddTransaction } from './screens/AddTransaction'
+import { Settings } from './screens/Settings'
 import { Onboarding } from './screens/Onboarding'
 import { useMe } from './lib/queries'
 import { getUserName } from './lib/telegram'
@@ -28,8 +29,9 @@ export default function App() {
         <Route path="budget" element={<Budget />} />
         <Route path="more" element={<More />} />
       </Route>
-      {/* Модальный экран без таббара */}
+      {/* Модальные экраны без таббара */}
       <Route path="/add" element={<AddTransaction />} />
+      <Route path="/settings" element={<Settings />} />
     </Routes>
   )
 }

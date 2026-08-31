@@ -1,6 +1,7 @@
+import { Link } from 'react-router-dom'
 import { getUserName } from '../lib/telegram'
-import { compact, budgetStatus, fillClass } from '../lib/format'
-import { useMe, useOverview } from '../lib/queries'
+import { compact, money, budgetStatus, fillClass, formatTxDate } from '../lib/format'
+import { useMe, useOverview, useTransactions } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 
 const MONTHS = [
@@ -13,9 +14,12 @@ function monthTitle(ym: string): string {
   return `${MONTHS[m - 1]} ${y}`
 }
 
+const RECENT_LIMIT = 5
+
 export function Home() {
   const me = useMe()
   const { data, isPending, isError, refetch } = useOverview()
+  const tx = useTransactions()
   const name = me.data?.name?.split(' ')[0] || getUserName()
 
   return (
@@ -101,6 +105,37 @@ export function Home() {
                   </div>
                 )
               })
+            )}
+          </div>
+
+          <div className="block">
+            <h3>
+              Последние операции
+              {tx.data && tx.data.length > 0 && <Link to="/more" className="seeall">Все →</Link>}
+            </h3>
+            {tx.isPending ? (
+              <SkeletonBlock rows={3} />
+            ) : tx.isError ? (
+              <ErrorState onRetry={tx.refetch} />
+            ) : tx.data.length === 0 ? (
+              <EmptyState emoji="🗒️" title="Пока нет операций" sub="Добавь первую по кнопке ➕ или через бота" />
+            ) : (
+              tx.data.slice(0, RECENT_LIMIT).map((t) => (
+                <div className="txrow" key={t.id}>
+                  <div className="tic">{t.emoji ?? '💸'}</div>
+                  <div className="tmid">
+                    <div className="tname">{t.subcategoryName}</div>
+                    <div className="tmeta">
+                      {t.categoryName}
+                      {t.comment ? ` · ${t.comment}` : ''} · {formatTxDate(t.date)}
+                    </div>
+                  </div>
+                  <div className={`tamt${t.article === 'income' ? ' plus' : ''}`}>
+                    {t.article === 'income' ? '+' : '−'}
+                    {money(t.amount).replace('−', '')}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </>

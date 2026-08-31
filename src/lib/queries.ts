@@ -7,6 +7,8 @@ import type {
   BudgetLine,
   CategoryGroup,
   Me,
+  NotificationSettings,
+  NotificationSettingsInput,
   OnboardingInput,
   Overview,
   Transaction,
@@ -27,6 +29,7 @@ export const keys = {
   budget: (month?: string, group?: string) => ['budget', month ?? 'current', group ?? 'Траты'] as const,
   categories: (article: Article) => ['categories', article] as const,
   transactions: (month?: string) => ['transactions', month ?? 'all'] as const,
+  settings: ['settings'] as const,
 }
 
 // ── Чтение ─────────────────────────────────────────────────────────────────
@@ -103,6 +106,24 @@ export function useCompleteOnboarding() {
       qc.setQueryData(keys.me, me)
       invalidateMoney(qc)
     },
+  })
+}
+
+// ── Настройки уведомлений ──────────────────────────────────────────────────
+export function useSettings() {
+  return useQuery({
+    queryKey: keys.settings,
+    queryFn: () => api.get<NotificationSettings>('/api/settings'),
+  })
+}
+
+/** Обновление настроек уведомлений. Ответ сразу кладём в кэш (без перезапроса). */
+export function useUpdateSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: NotificationSettingsInput) =>
+      api.patch<NotificationSettings>('/api/settings', body),
+    onSuccess: (settings) => qc.setQueryData(keys.settings, settings),
   })
 }
 

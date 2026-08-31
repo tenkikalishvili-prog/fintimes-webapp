@@ -35,3 +35,17 @@ export const fillClass: Record<BudgetStatus, string> = {
   warn: 'fill-a',
   over: 'fill-r',
 }
+
+/** Дата операции для списка: «сегодня» / «вчера» / «5 авг». */
+export function formatTxDate(iso: string): string {
+  const d = new Date(iso)
+  const today = new Date()
+  const yesterday = new Date(today.getTime() - 864e5)
+  if (sameDay(d, today)) return 'сегодня'
+  if (sameDay(d, yesterday)) return 'вчера'
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return a.toDateString() === b.toDateString()
+}
