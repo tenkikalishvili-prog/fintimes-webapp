@@ -1,16 +1,31 @@
 import { useRef, useState } from 'react'
 import { budgetStatus, compact, fillClass, money } from '../lib/format'
-import { useBudgetOverview, useSetBudget, useRenameSubcategory, useRenameGroup } from '../lib/queries'
+import {
+  useBudgetOverview,
+  useSetBudget,
+  useRenameSubcategory,
+  useRenameGroup,
+  useCreateSubcategory,
+  useDeleteSubcategory,
+  useDeleteGroup,
+} from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { haptic } from '../lib/telegram'
 import { ApiError } from '../lib/api'
 import type { BudgetGroupView, BudgetSub } from '../types'
+
+// Экран «Бюджет» работает с расходными категориями (по ним считаются лимиты).
+const ARTICLE = 'expense' as const
+// Служебная группа: по ней считается дневной лимит — удалять её нельзя.
+const SERVICE_GROUP = 'Траты'
 
 export function Budget() {
   const { data, isPending, isError, refetch } = useBudgetOverview()
   const [active, setActive] = useState(0)
   const [editing, setEditing] = useState<BudgetSub | null>(null)
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
+  const [addingSubTo, setAddingSubTo] = useState<string | null>(null)
+  const [addingGroup, setAddingGroup] = useState(false)
   const carRef = useRef<HTMLDivElement>(null)
 
   // Тап по точке — мгновенный переход к панели. Плавный smooth-scroll на
@@ -42,7 +57,10 @@ export function Budget() {
         <ErrorState onRetry={refetch} />
       ) : data.length === 0 ? (
         <div className="block">
-          <EmptyState emoji="🎯" title="Категорий пока нет" sub="Появятся после первого входа" />
+          <EmptyState emoji="🎯" title="Категорий пока нет" sub="Добавьте первую категорию" />
+          <button className="btn btn-secondary" onClick={() => { haptic('light'); setAddingGroup(true) }}>
+            ＋ Новая категория
+          </button>
         </div>
       ) : (
         <>
@@ -50,7 +68,13 @@ export function Budget() {
               Название категории — заголовком внутри блока итога. Свайп + точки. */}
           <div className="bcar" ref={carRef} onScroll={onScroll}>
             {data.map((g) => (
-              <CategoryPanel key={g.group} group={g} onEdit={setEditing} onEditGroup={setEditingGroup} />
+              <CategoryPanel
+                key={g.group}
+                group={g}
+                onEdit={setEditing}
+                onEditGroup={setEditingGroup}
+                onAddSub={setAddingSubTo}
+              />
             ))}
           </div>
 
@@ -66,6 +90,15 @@ export function Budget() {
               ))}
             </div>
           )}
+
+          <div className="newgroup-row">
+            <button
+              className="btn btn-secondary newgroup-btn"
+              onClick={() => { haptic('light'); setAddingGroup(true) }}
+            >
+              ＋ Новая категория
+            </button>
+          </div>
         </>
       )}
 
@@ -73,6 +106,10 @@ export function Budget() {
       {editingGroup !== null && (
         <GroupSheet group={editingGroup} onClose={() => setEditingGroup(null)} />
       )}
+      {addingSubTo !== null && (
+        <AddSubSheet group={addingSubTo} onClose={() => setAddingSubTo(null)} />
+      )}
+      {addingGroup && <AddGroupSheet onClose={() => setAddingGroup(false)} />}
     </>
   )
 }
@@ -81,10 +118,12 @@ function CategoryPanel({
   group,
   onEdit,
   onEditGroup,
+  onAddSub,
 }: {
   group: BudgetGroupView
   onEdit: (s: BudgetSub) => void
   onEditGroup: (g: string) => void
+  onAddSub: (g: string) => void
 }) {
   const st = budgetStatus(group.spent, group.limit)
   const pct = group.limit > 0 ? Math.min(100, Math.round((group.spent / group.limit) * 100)) : 0
@@ -141,6 +180,10 @@ function CategoryPanel({
             </button>
           )
         })}
+
+        <button className="cat-add" onClick={() => { haptic('light'); onAddSub(group.group) }}>
+          ＋ Подкатегория
+        </button>
       </div>
     </div>
   )
@@ -150,9 +193,11 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
   const [name, setName] = useState(sub.name)
   const [amount, setAmount] = useState(sub.limit > 0 ? String(Math.round(sub.limit)) : '')
   const [err, setErr] = useState<string | null>(null)
+  const [confirmDel, setConfirmDel] = useState(false)
   const rename = useRenameSubcategory()
   const setBudget = useSetBudget()
-  const pending = rename.isPending || setBudget.isPending
+  const del = useDeleteSubcategory()
+  const pending = rename.isPending || setBudget.isPending || del.isPending
 
   const save = async () => {
     const nm = name.trim()
@@ -167,6 +212,17 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
       onClose()
     } catch (e) {
       setErr(e instanceof ApiError && e.status === 400 ? 'Такое название уже есть в этой категории' : 'Не удалось сохранить')
+    }
+  }
+
+  const remove = async () => {
+    setErr(null)
+    try {
+      await del.mutateAsync(sub.subcategoryId)
+      haptic('medium')
+      onClose()
+    } catch {
+      setErr('Не удалось удалить')
     }
   }
 
@@ -204,6 +260,26 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
         <button className="btn btn-primary" disabled={pending} onClick={save}>
           {pending ? 'Сохраняю…' : `Сохранить · ${money(Number(amount || 0))}`}
         </button>
+
+        {confirmDel ? (
+          <>
+            <p className="del-note">
+              Если по подкатегории есть операции — она уйдёт в архив (история сохранится).
+            </p>
+            <div className="del-row">
+              <button className="btn btn-ghost" disabled={pending} onClick={() => setConfirmDel(false)}>
+                Отмена
+              </button>
+              <button className="btn btn-danger" disabled={pending} onClick={remove}>
+                {del.isPending ? 'Удаляю…' : 'Удалить'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <button className="btn btn-ghost del-btn" disabled={pending} onClick={() => setConfirmDel(true)}>
+            Удалить подкатегорию
+          </button>
+        )}
       </div>
     </div>
   )
@@ -212,7 +288,11 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
 function GroupSheet({ group, onClose }: { group: string; onClose: () => void }) {
   const [name, setName] = useState(group)
   const [err, setErr] = useState<string | null>(null)
+  const [confirmDel, setConfirmDel] = useState(false)
   const rename = useRenameGroup()
+  const del = useDeleteGroup()
+  const isService = group === SERVICE_GROUP
+  const pending = rename.isPending || del.isPending
 
   const save = async () => {
     const nm = name.trim()
@@ -225,6 +305,17 @@ function GroupSheet({ group, onClose }: { group: string; onClose: () => void }) 
       onClose()
     } catch (e) {
       setErr(e instanceof ApiError && e.status === 400 ? 'Категория с таким названием уже есть' : 'Не удалось сохранить')
+    }
+  }
+
+  const remove = async () => {
+    setErr(null)
+    try {
+      await del.mutateAsync({ article: ARTICLE, name: group })
+      haptic('medium')
+      onClose()
+    } catch {
+      setErr('Не удалось удалить категорию')
     }
   }
 
@@ -247,8 +338,161 @@ function GroupSheet({ group, onClose }: { group: string; onClose: () => void }) 
             <span>{err}</span>
           </div>
         )}
-        <button className="btn btn-primary" disabled={rename.isPending} onClick={save}>
+        <button className="btn btn-primary" disabled={pending} onClick={save}>
           {rename.isPending ? 'Сохраняю…' : 'Сохранить'}
+        </button>
+
+        {isService ? (
+          <p className="del-note">
+            Категорию «{SERVICE_GROUP}» удалить нельзя — по ней считается дневной лимит.
+          </p>
+        ) : confirmDel ? (
+          <>
+            <p className="del-note">
+              Удалить категорию со всеми подкатегориями? Те, по которым есть операции,
+              уйдут в архив (история сохранится).
+            </p>
+            <div className="del-row">
+              <button className="btn btn-ghost" disabled={pending} onClick={() => setConfirmDel(false)}>
+                Отмена
+              </button>
+              <button className="btn btn-danger" disabled={pending} onClick={remove}>
+                {del.isPending ? 'Удаляю…' : 'Удалить'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <button className="btn btn-ghost del-btn" disabled={pending} onClick={() => setConfirmDel(true)}>
+            Удалить категорию
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AddSubSheet({ group, onClose }: { group: string; onClose: () => void }) {
+  const [name, setName] = useState('')
+  const [emoji, setEmoji] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+  const create = useCreateSubcategory()
+
+  const save = async () => {
+    const nm = name.trim()
+    if (!nm) { setErr('Введите название'); return }
+    setErr(null)
+    try {
+      await create.mutateAsync({ article: ARTICLE, group, name: nm, emoji: emoji.trim() || undefined })
+      haptic('medium')
+      onClose()
+    } catch (e) {
+      setErr(e instanceof ApiError && e.status === 400 ? 'Такая подкатегория уже есть' : 'Не удалось создать')
+    }
+  }
+
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grab" />
+        <h4>Новая подкатегория</h4>
+        <label className="sheet-label">Категория: {group}</label>
+
+        <div className="add-row">
+          <input
+            className="input add-emoji"
+            placeholder="🙂"
+            value={emoji}
+            maxLength={2}
+            onChange={(e) => setEmoji(e.target.value)}
+          />
+          <input
+            className="input"
+            autoFocus
+            placeholder="Название"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+
+        {err && (
+          <div className="toast over" style={{ margin: '12px 0 0' }}>
+            <span className="ti">⚠️</span>
+            <span>{err}</span>
+          </div>
+        )}
+
+        <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={create.isPending} onClick={save}>
+          {create.isPending ? 'Создаю…' : 'Добавить'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function AddGroupSheet({ onClose }: { onClose: () => void }) {
+  const [group, setGroup] = useState('')
+  const [name, setName] = useState('')
+  const [emoji, setEmoji] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+  const create = useCreateSubcategory()
+
+  const save = async () => {
+    const gr = group.trim()
+    const nm = name.trim()
+    if (!gr) { setErr('Введите название категории'); return }
+    if (!nm) { setErr('Введите название первой подкатегории'); return }
+    setErr(null)
+    try {
+      await create.mutateAsync({ article: ARTICLE, group: gr, name: nm, emoji: emoji.trim() || undefined })
+      haptic('medium')
+      onClose()
+    } catch (e) {
+      setErr(e instanceof ApiError && e.status === 400 ? 'Такая подкатегория уже есть' : 'Не удалось создать')
+    }
+  }
+
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grab" />
+        <h4>Новая категория</h4>
+        <label className="sheet-label">Категория объединяет подкатегории. Добавьте первую подкатегорию сразу.</label>
+
+        <input
+          className="input"
+          autoFocus
+          placeholder="Название категории"
+          value={group}
+          onChange={(e) => setGroup(e.target.value)}
+          style={{ marginBottom: 14 }}
+        />
+
+        <label className="sheet-label">Первая подкатегория</label>
+        <div className="add-row">
+          <input
+            className="input add-emoji"
+            placeholder="🙂"
+            value={emoji}
+            maxLength={2}
+            onChange={(e) => setEmoji(e.target.value)}
+          />
+          <input
+            className="input"
+            placeholder="Название подкатегории"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+
+        {err && (
+          <div className="toast over" style={{ margin: '12px 0 0' }}>
+            <span className="ti">⚠️</span>
+            <span>{err}</span>
+          </div>
+        )}
+
+        <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={create.isPending} onClick={save}>
+          {create.isPending ? 'Создаю…' : 'Создать категорию'}
         </button>
       </div>
     </div>

@@ -7,12 +7,14 @@ import type {
   BudgetGroupView,
   BudgetLine,
   CategoryGroup,
+  DeleteResult,
   Me,
   NotificationSettings,
   NotificationSettingsInput,
   OnboardingInput,
   Overview,
   Subcategory,
+  SubcategoryInput,
   Transaction,
   TransactionInput,
 } from '../types'
@@ -154,6 +156,49 @@ export function useRenameSubcategory() {
   return useMutation({
     mutationFn: ({ id, name }: { id: number; name: string }) =>
       api.patch<Subcategory>(`/api/categories/${id}`, { name }),
+    onSuccess: () => {
+      invalidateMoney(qc)
+      qc.invalidateQueries({ queryKey: ['categories'] })
+    },
+  })
+}
+
+/** Создание подкатегории (или новой категории, если группа новая). */
+export function useCreateSubcategory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: SubcategoryInput) =>
+      api.post<{ id: number; name: string; emoji: string | null; group: string; article: string }>(
+        '/api/categories',
+        body,
+      ),
+    onSuccess: () => {
+      invalidateMoney(qc)
+      qc.invalidateQueries({ queryKey: ['categories'] })
+    },
+  })
+}
+
+/** Удаление подкатегории. Если по ней есть операции — бэкенд её архивирует. */
+export function useDeleteSubcategory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.del<DeleteResult>(`/api/categories/${id}`),
+    onSuccess: () => {
+      invalidateMoney(qc)
+      qc.invalidateQueries({ queryKey: ['categories'] })
+    },
+  })
+}
+
+/** Удаление категории (группы) целиком. Служебную «Траты» удалить нельзя. */
+export function useDeleteGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ article, name }: { article: Article; name: string }) =>
+      api.del<{ deleted: number; archived: number }>(
+        `/api/categories/group${qs({ article, name })}`,
+      ),
     onSuccess: () => {
       invalidateMoney(qc)
       qc.invalidateQueries({ queryKey: ['categories'] })

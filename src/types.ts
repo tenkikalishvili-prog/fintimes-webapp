@@ -119,6 +119,20 @@ export interface CategoryGroup {
   subcategories: Subcategory[]
 }
 
+/** Данные создания подкатегории (и, если группа новая, — новой категории). */
+export interface SubcategoryInput {
+  article: Article
+  group: string
+  name: string
+  emoji?: string
+}
+
+/** Результат удаления: 'deleted' — удалено, 'archived' — скрыто (есть операции). */
+export interface DeleteResult {
+  action: 'deleted' | 'archived'
+  id: number
+}
+
 export interface Transaction {
   id: number
   article: Article
