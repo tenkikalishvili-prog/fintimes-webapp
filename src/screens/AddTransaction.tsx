@@ -73,20 +73,21 @@ export function AddTransaction() {
             </div>
 
             <div className="amount-in">
-              <input
-                className="a"
-                inputMode="numeric"
-                placeholder="0 ₽"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
-                style={{ background: 'none', border: 'none', textAlign: 'center', color: 'var(--text)', width: '100%' }}
-              />
+              <div className="a-row">
+                <input
+                  className="a a-input"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+                  style={{ width: `${Math.max(1, amount.length)}ch` }}
+                />
+                <span className="a cur">₽</span>
+              </div>
               <div className="c">введите сумму</div>
             </div>
 
-            <div className="faint" style={{ fontSize: 11, margin: '0 0 8px' }}>
-              Категория
-            </div>
+            <div className="fieldlbl">Категория</div>
 
             {cats.isPending ? (
               <SkeletonBlock rows={4} />

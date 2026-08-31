@@ -1,4 +1,4 @@
-import { compact } from '../lib/format'
+import { compact, money } from '../lib/format'
 import { useAnalytics } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 
@@ -47,20 +47,26 @@ function AnalyticsChart({
 
   return (
     <div className="block">
-      <div className="donut-wrap">
+      <h3 style={{ marginBottom: 4 }}>Расходы за месяц</h3>
+      <div className="an-total">{money(total)}</div>
+      <div className="donut-wrap" style={{ marginTop: 12 }}>
         <div className="donut" style={{ background: `conic-gradient(${stops})` }}>
           <div className="tot">
-            <b>{compact(total)} ₽</b>
-            <s>расходы</s>
+            <b>{compact(total)}</b>
+            <s>всего</s>
           </div>
         </div>
         <div className="lg">
-          {slices.map((s, i) => (
-            <div className="li" key={s.name}>
-              <span className="dot" style={{ background: PALETTE[i % PALETTE.length] }} />
-              {s.name} {compact(s.value)}
-            </div>
-          ))}
+          {slices.map((s, i) => {
+            const pct = total > 0 ? Math.round((s.value / total) * 100) : 0
+            return (
+              <div className="li" key={s.name}>
+                <span className="dot" style={{ background: PALETTE[i % PALETTE.length] }} />
+                <span className="nm">{s.name}</span>
+                <span className="val">{compact(s.value)} · {pct}%</span>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

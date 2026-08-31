@@ -49,6 +49,11 @@ export function Budget() {
     <>
       <header className="apphead">
         <div className="mo">Бюджет</div>
+        {data && data.length > 0 && (
+          <button className="head-add" onClick={() => { haptic('light'); setAddingGroup(true) }}>
+            ＋ Категория
+          </button>
+        )}
       </header>
 
       {isPending ? (
@@ -91,14 +96,6 @@ export function Budget() {
             </div>
           )}
 
-          <div className="newgroup-row">
-            <button
-              className="btn btn-secondary newgroup-btn"
-              onClick={() => { haptic('light'); setAddingGroup(true) }}
-            >
-              ＋ Новая категория
-            </button>
-          </div>
         </>
       )}
 

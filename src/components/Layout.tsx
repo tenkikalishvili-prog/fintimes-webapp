@@ -11,14 +11,14 @@ export function Layout() {
         <Outlet />
       </div>
       <button
-        className="fab"
+        className="navfab"
         aria-label="Добавить операцию"
         onClick={() => {
           haptic('medium')
           navigate('/add')
         }}
       >
-        +
+        ＋
       </button>
       <TabBar />
     </div>
