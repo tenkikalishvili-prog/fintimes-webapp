@@ -5,7 +5,6 @@ import { ARTICLE_LABELS } from '../types'
 import { useCategories, useDeleteTransaction, useUpdateTransaction } from '../lib/queries'
 import { SkeletonBlock, ErrorState } from '../components/States'
 import { haptic } from '../lib/telegram'
-import { money } from '../lib/format'
 
 const ARTICLES: Article[] = ['expense', 'income', 'debt']
 
@@ -24,6 +23,7 @@ export function EditTransaction() {
   const [sub, setSub] = useState<Subcategory | null>(null)
   const [comment, setComment] = useState(tx?.comment ?? '')
   const [date, setDate] = useState(tx?.date ?? '')
+  const [armedDelete, setArmedDelete] = useState(false)
   // Отложенный матч исходной подкатегории: ждём, пока загрузятся категории статьи.
   const [pendingMatch, setPendingMatch] = useState<{ group: string; subId: number } | null>(
     tx ? { group: tx.categoryName, subId: tx.categoryId } : null,
@@ -90,9 +90,15 @@ export function EditTransaction() {
     )
   }
 
+  // Удаление в два тапа: первый — «взводим» кнопку, второй — удаляем.
   const remove = () => {
+    if (!armedDelete) {
+      haptic('light')
+      setArmedDelete(true)
+      setTimeout(() => setArmedDelete(false), 3000)
+      return
+    }
     haptic('medium')
-    if (!confirm(`Удалить «${tx.subcategoryName} ${money(tx.amount)}»?`)) return
     del.mutate(tx.id, { onSuccess: () => { haptic('medium'); close() } })
   }
 
@@ -203,7 +209,7 @@ export function EditTransaction() {
           {update.isPending ? 'Сохраняю…' : 'Сохранить изменения'}
         </button>
         <button className="btn btn-danger" onClick={remove} style={{ marginTop: 10 }}>
-          {del.isPending ? 'Удаляю…' : 'Удалить операцию'}
+          {del.isPending ? 'Удаляю…' : armedDelete ? 'Нажми ещё раз — удалить' : 'Удалить операцию'}
         </button>
       </div>
     </div>

@@ -28,6 +28,7 @@ export function Home() {
   const tx = useTransactions()
   const del = useDeleteTransaction()
   const [filter, setFilter] = useState<Filter>('all')
+  const [armed, setArmed] = useState<number | null>(null)
   const name = me.data?.name?.split(' ')[0] || getUserName()
   const sign = CURRENCY_SIGN[me.data?.currency ?? 'RUB'] ?? '₽'
 
@@ -160,14 +161,21 @@ export function Home() {
                     {money(t.amount).replace('−', '')}
                   </div>
                   <button
-                    className="tx-del"
+                    className={`tx-del${armed === t.id ? ' armed' : ''}`}
                     aria-label="Удалить"
                     onClick={() => {
-                      haptic('medium')
-                      if (confirm(`Удалить «${t.subcategoryName} ${money(t.amount)}»?`)) del.mutate(t.id)
+                      if (armed === t.id) {
+                        haptic('medium')
+                        del.mutate(t.id)
+                        setArmed(null)
+                      } else {
+                        haptic('light')
+                        setArmed(t.id)
+                        setTimeout(() => setArmed((cur) => (cur === t.id ? null : cur)), 3000)
+                      }
                     }}
                   >
-                    ✕
+                    {armed === t.id ? 'Удалить?' : '✕'}
                   </button>
                 </div>
               ))

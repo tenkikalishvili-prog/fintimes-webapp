@@ -26,6 +26,8 @@ export function History() {
   const [group, setGroup] = useState<string | undefined>(undefined)
   const [search, setSearch] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
+  // id операции, у которой ✕ «взведён» (ждёт второго тапа для удаления).
+  const [armed, setArmed] = useState<number | null>(null)
 
   // Поиск с задержкой — не дёргаем API на каждой букве.
   useEffect(() => {
@@ -71,12 +73,22 @@ export function History() {
     setGroup(undefined) // категории привязаны к статье — сбрасываем при смене типа
   }
 
-  const remove = (id: number, label: string) => {
-    haptic('medium')
-    if (confirm(`Удалить «${label}»?`)) del.mutate(id)
+  // Первый тап по ✕ — взводим (показываем «Удалить?»), второй — удаляем.
+  // Через 3с взвод снимается сам, чтобы случайный тап не «висел».
+  const armDelete = (id: number) => {
+    if (armed === id) {
+      haptic('medium')
+      del.mutate(id)
+      setArmed(null)
+      return
+    }
+    haptic('light')
+    setArmed(id)
+    setTimeout(() => setArmed((cur) => (cur === id ? null : cur)), 3000)
   }
 
   const openEdit = (t: Transaction) => {
+    if (armed) { setArmed(null); return } // тап по строке отменяет взведённое удаление
     haptic('light')
     navigate(`/edit/${t.id}`, { state: { tx: t } })
   }
@@ -185,7 +197,7 @@ export function History() {
             </div>
 
             <div className="block hist-list">
-              {renderGrouped(items, remove, openEdit)}
+              {renderGrouped(items, armed, armDelete, openEdit)}
             </div>
 
             {hasNextPage && (
@@ -205,10 +217,11 @@ export function History() {
 }
 
 /** Рендер списка с заголовками-днями (данные уже отсортированы: новые сверху).
- *  Тап по строке → редактирование; ✕ — быстрое удаление (не открывает редактор). */
+ *  Тап по строке → редактирование; ✕ — удаление в два тапа (не открывает редактор). */
 function renderGrouped(
   items: Transaction[],
-  remove: (id: number, label: string) => void,
+  armed: number | null,
+  armDelete: (id: number) => void,
   openEdit: (t: Transaction) => void,
 ) {
   const out: ReactNode[] = []
@@ -237,14 +250,14 @@ function renderGrouped(
           {money(t.amount).replace('−', '')}
         </div>
         <button
-          className="tx-del"
+          className={`tx-del${armed === t.id ? ' armed' : ''}`}
           aria-label="Удалить"
           onClick={(e) => {
             e.stopPropagation()
-            remove(t.id, `${t.subcategoryName} ${money(t.amount)}`)
+            armDelete(t.id)
           }}
         >
-          ✕
+          {armed === t.id ? 'Удалить?' : '✕'}
         </button>
       </div>,
     )
