@@ -170,7 +170,8 @@ a{color:inherit;text-decoration:none}
 .block h3{font-size:14px;color:var(--text);font-weight:800;margin-bottom:13px;display:flex;
   justify-content:space-between;align-items:baseline;letter-spacing:-.01em}
 .block h3 span{font-size:11px;color:var(--muted);font-weight:600}
-.block h3 .seeall{color:var(--accent-soft);font-weight:700;text-decoration:none;white-space:nowrap}
+.block h3 .seeall{color:var(--accent-soft);font-weight:700;text-decoration:none;white-space:nowrap;
+  background:none;border:none;padding:0;cursor:pointer;font-size:12px}
 .block h3 .seeall:active{opacity:.6}
 
 /* ---------- Подзаголовок ленты (Сегодня/Вчера) ---------- */
@@ -202,6 +203,49 @@ a{color:inherit;text-decoration:none}
 .txrow .tamt.plus{color:var(--ok)}
 .tx-del{background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;padding:4px 2px 4px 8px}
 .tx-del:active{color:var(--over)}
+
+/* ---------- Экран «История» ---------- */
+.hist-period{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.hp-nav{width:34px;height:34px;flex-shrink:0;border-radius:11px;background:var(--card);
+  border:1px solid var(--line);color:var(--text);font-size:18px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.hp-nav:disabled{opacity:.35;cursor:default}
+.hp-lbl{flex:1;text-align:center;font-size:14px;font-weight:800;letter-spacing:-.01em}
+.hp-all{flex-shrink:0;background:none;border:none;color:var(--accent-soft);font-weight:700;
+  font-size:12px;cursor:pointer;padding:4px 2px;white-space:nowrap}
+.hp-all:active{opacity:.6}
+
+.hist-search{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:0 12px;margin-bottom:12px}
+.hist-search .hs-ic{font-size:13px;opacity:.7;flex-shrink:0}
+.hist-search .hs-input{flex:1;background:none;border:none;outline:none;color:var(--text);
+  font-size:14px;font-weight:600;padding:12px 0;min-width:0}
+.hist-search .hs-input::placeholder{color:var(--faint);font-weight:500}
+.hist-search .hs-clear{background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;
+  flex-shrink:0;padding:4px}
+
+/* Горизонтальная прокрутка рядов фильтров без переноса */
+.chips-scroll{overflow-x:auto;margin:0 -18px 10px;padding:0 18px;scrollbar-width:none}
+.chips-scroll::-webkit-scrollbar{display:none}
+.chips-scroll .pills{flex-wrap:nowrap;margin-bottom:0}
+.chips-scroll .pill{white-space:nowrap;flex-shrink:0}
+
+.hist-summary{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:12px;color:var(--muted);font-weight:600;margin:2px 2px 10px}
+.hist-summary .hs-nums{display:flex;gap:10px;font-variant-numeric:tabular-nums}
+.hist-summary .hs-out{color:var(--text);font-weight:800}
+.hist-summary .hs-in{color:var(--ok);font-weight:800}
+
+.hist-list{padding-top:6px}
+.hist-day{font-size:10.5px;color:var(--faint);font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;margin:14px 0 2px}
+.hist-list>.hist-day:first-child{margin-top:0}
+
+.more-btn{display:block;width:100%;padding:13px;border-radius:14px;background:var(--card);
+  border:1px solid var(--line);color:var(--accent-soft);font-size:13px;font-weight:700;
+  cursor:pointer;margin-bottom:12px}
+.more-btn:disabled{opacity:.5;cursor:default}
+.more-btn:active{opacity:.7}
 
 /* ---------- Donut + легенда ---------- */
 .donut-wrap{display:flex;align-items:center;gap:18px}

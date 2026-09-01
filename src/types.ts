@@ -152,6 +152,18 @@ export interface TransactionInput {
   comment?: string
 }
 
+/** Фильтры экрана «История». Все поля опциональны и комбинируются. */
+export interface HistoryFilters {
+  /** Период 'YYYY-MM'. undefined — за всё время. */
+  month?: string
+  /** Тип операции. undefined — любой. */
+  article?: Article
+  /** Имя категории (группы). undefined — любая. */
+  group?: string
+  /** Поиск по описанию и названию подкатегории. */
+  q?: string
+}
+
 /** Статус бюджета — единственное место, где живёт светофор. */
 export type BudgetStatus = 'ok' | 'warn' | 'over'
 

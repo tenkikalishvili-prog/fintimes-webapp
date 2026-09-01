@@ -5,6 +5,7 @@ import { Analytics } from './screens/Analytics'
 import { Budget } from './screens/Budget'
 import { More } from './screens/More'
 import { AddTransaction } from './screens/AddTransaction'
+import { History } from './screens/History'
 import { Settings } from './screens/Settings'
 import { Onboarding } from './screens/Onboarding'
 import { useMe } from './lib/queries'
@@ -31,6 +32,7 @@ export default function App() {
       </Route>
       {/* Модальные экраны без таббара */}
       <Route path="/add" element={<AddTransaction />} />
+      <Route path="/history" element={<History />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
   )

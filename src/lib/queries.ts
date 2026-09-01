@@ -1,9 +1,10 @@
 // React Query-хуки над HTTP-API. Один источник данных для всех экранов.
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './api'
 import type {
   Analytics,
   Article,
+  HistoryFilters,
   BudgetGroupView,
   BudgetLine,
   CategoryGroup,
@@ -35,6 +36,7 @@ export const keys = {
   budgetOverview: (month?: string) => ['budget-overview', month ?? 'current'] as const,
   categories: (article: Article) => ['categories', article] as const,
   transactions: (month?: string) => ['transactions', month ?? 'all'] as const,
+  history: (filters: HistoryFilters) => ['history', filters] as const,
   settings: ['settings'] as const,
 }
 
@@ -86,6 +88,23 @@ export function useTransactions(month?: string, limit = 30) {
   })
 }
 
+/**
+ * Полная история операций с фильтрами и постраничной подгрузкой («Показать ещё»).
+ * Каждая страница — массив операций; конец достигнут, когда пришло меньше pageSize.
+ */
+export function useHistory(filters: HistoryFilters, pageSize = 40) {
+  return useInfiniteQuery({
+    queryKey: keys.history(filters),
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      api.get<Transaction[]>(
+        `/api/transactions${qs({ ...filters, limit: pageSize, offset: pageParam })}`,
+      ),
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < pageSize ? undefined : allPages.length * pageSize,
+  })
+}
+
 // ── Изменение ────────────────────────────────────────────────────────────
 /** После записи/удаления операции пересчитываются суммы во всех разделах. */
 function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
@@ -94,6 +113,7 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['budget'] })
   qc.invalidateQueries({ queryKey: ['budget-overview'] })
   qc.invalidateQueries({ queryKey: ['transactions'] })
+  qc.invalidateQueries({ queryKey: ['history'] })
 }
 
 /** Умный ввод: «кофе 350» → сумма + подобранная подкатегория (ничего не пишет в БД). */

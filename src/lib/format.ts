@@ -49,3 +49,37 @@ export function formatTxDate(iso: string): string {
 function sameDay(a: Date, b: Date): boolean {
   return a.toDateString() === b.toDateString()
 }
+
+const MONTHS_RU = [
+  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+]
+
+/** 'YYYY-MM' → «Сентябрь 2026». */
+export function monthTitle(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  return `${MONTHS_RU[m - 1]} ${y}`
+}
+
+/** Текущий месяц в формате 'YYYY-MM'. */
+export function currentMonth(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Сдвиг месяца 'YYYY-MM' на delta месяцев (±). */
+export function shiftMonth(ym: string, delta: number): string {
+  const [y, m] = ym.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Заголовок дня для группировки истории: «Сегодня» / «Вчера» / «5 сентября, пн». */
+export function dayHeading(iso: string): string {
+  const d = new Date(iso)
+  const today = new Date()
+  const yesterday = new Date(today.getTime() - 864e5)
+  if (sameDay(d, today)) return 'Сегодня'
+  if (sameDay(d, yesterday)) return 'Вчера'
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' })
+}

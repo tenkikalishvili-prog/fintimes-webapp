@@ -127,7 +127,12 @@ export function Home() {
           </div>
 
           <div className="block">
-            <h3>Операции</h3>
+            <h3>
+              Операции
+              <button className="seeall" onClick={() => { haptic('light'); navigate('/history') }}>
+                Все →
+              </button>
+            </h3>
             <div className="pills">
               <button className={`pill${filter === 'all' ? ' on' : ''}`} onClick={() => { haptic('light'); setFilter('all') }}>Все</button>
               <button className={`pill${filter === 'expense' ? ' on' : ''}`} onClick={() => { haptic('light'); setFilter('expense') }}>Расход</button>
