@@ -152,6 +152,14 @@ export interface TransactionInput {
   comment?: string
 }
 
+/** Частичное изменение операции. Присылаем только изменённые поля. */
+export interface TransactionUpdateInput {
+  amount?: number
+  categoryId?: number
+  date?: string
+  comment?: string
+}
+
 /** Фильтры экрана «История». Все поля опциональны и комбинируются. */
 export interface HistoryFilters {
   /** Период 'YYYY-MM'. undefined — за всё время. */

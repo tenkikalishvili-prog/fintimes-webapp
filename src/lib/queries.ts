@@ -19,6 +19,7 @@ import type {
   SubcategoryInput,
   Transaction,
   TransactionInput,
+  TransactionUpdateInput,
 } from '../types'
 
 const qs = (params: Record<string, string | number | undefined>): string => {
@@ -127,6 +128,15 @@ export function useCreateTransaction() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: TransactionInput) => api.post<Transaction>('/api/transactions', body),
+    onSuccess: () => invalidateMoney(qc),
+  })
+}
+
+export function useUpdateTransaction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: TransactionUpdateInput }) =>
+      api.patch<Transaction>(`/api/transactions/${id}`, body),
     onSuccess: () => invalidateMoney(qc),
   })
 }

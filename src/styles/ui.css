@@ -237,6 +237,8 @@ a{color:inherit;text-decoration:none}
 .hist-summary .hs-in{color:var(--ok);font-weight:800}
 
 .hist-list{padding-top:6px}
+.txrow.tap{cursor:pointer;border-radius:12px;transition:background .12s}
+.txrow.tap:active{background:var(--accent-dim)}
 .hist-day{font-size:10.5px;color:var(--faint);font-weight:800;text-transform:uppercase;
   letter-spacing:.06em;margin:14px 0 2px}
 .hist-list>.hist-day:first-child{margin-top:0}

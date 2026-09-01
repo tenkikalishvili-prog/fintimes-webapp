@@ -76,6 +76,11 @@ export function History() {
     if (confirm(`Удалить «${label}»?`)) del.mutate(id)
   }
 
+  const openEdit = (t: Transaction) => {
+    haptic('light')
+    navigate(`/edit/${t.id}`, { state: { tx: t } })
+  }
+
   return (
     <div className="app-shell">
       <div className="app-body no-tabbar">
@@ -180,7 +185,7 @@ export function History() {
             </div>
 
             <div className="block hist-list">
-              {renderGrouped(items, remove)}
+              {renderGrouped(items, remove, openEdit)}
             </div>
 
             {hasNextPage && (
@@ -199,8 +204,13 @@ export function History() {
   )
 }
 
-/** Рендер списка с заголовками-днями (данные уже отсортированы: новые сверху). */
-function renderGrouped(items: Transaction[], remove: (id: number, label: string) => void) {
+/** Рендер списка с заголовками-днями (данные уже отсортированы: новые сверху).
+ *  Тап по строке → редактирование; ✕ — быстрое удаление (не открывает редактор). */
+function renderGrouped(
+  items: Transaction[],
+  remove: (id: number, label: string) => void,
+  openEdit: (t: Transaction) => void,
+) {
   const out: ReactNode[] = []
   let lastDay = ''
   for (const t of items) {
@@ -213,7 +223,7 @@ function renderGrouped(items: Transaction[], remove: (id: number, label: string)
       )
     }
     out.push(
-      <div className="txrow" key={t.id}>
+      <div className="txrow tap" key={t.id} onClick={() => openEdit(t)}>
         <div className="tic">{t.emoji ?? '💸'}</div>
         <div className="tmid">
           <div className="tname">{t.subcategoryName}</div>
@@ -229,7 +239,10 @@ function renderGrouped(items: Transaction[], remove: (id: number, label: string)
         <button
           className="tx-del"
           aria-label="Удалить"
-          onClick={() => remove(t.id, `${t.subcategoryName} ${money(t.amount)}`)}
+          onClick={(e) => {
+            e.stopPropagation()
+            remove(t.id, `${t.subcategoryName} ${money(t.amount)}`)
+          }}
         >
           ✕
         </button>
