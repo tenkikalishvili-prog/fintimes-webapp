@@ -13,6 +13,7 @@ import type {
   NotificationSettingsInput,
   OnboardingInput,
   Overview,
+  SmartParseResult,
   Subcategory,
   SubcategoryInput,
   Transaction,
@@ -93,6 +94,13 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['budget'] })
   qc.invalidateQueries({ queryKey: ['budget-overview'] })
   qc.invalidateQueries({ queryKey: ['transactions'] })
+}
+
+/** Умный ввод: «кофе 350» → сумма + подобранная подкатегория (ничего не пишет в БД). */
+export function useSmartParse() {
+  return useMutation({
+    mutationFn: (text: string) => api.post<SmartParseResult>('/api/smart-parse', { text }),
+  })
 }
 
 export function useCreateTransaction() {

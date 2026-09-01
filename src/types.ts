@@ -154,3 +154,22 @@ export interface TransactionInput {
 
 /** Статус бюджета — единственное место, где живёт светофор. */
 export type BudgetStatus = 'ok' | 'warn' | 'over'
+
+/** Разбор строки умного ввода («кофе 350») для предзаполнения формы «Добавить». */
+export interface SmartParseResult {
+  /** Распознанная сумма, ₽. null — сумму понять не удалось. */
+  amount: number | null
+  /** Очищенное описание (без суммы и валюты). */
+  description: string
+  /** Предполагаемая статья. */
+  article: Article
+  /** Угадана ли подкатегория. */
+  matched: boolean
+  /** id подобранной подкатегории (если matched). */
+  categoryId: number | null
+  /** Категория (группа) подобранной подкатегории. */
+  group: string | null
+  /** Имя подобранной подкатегории. */
+  subcategoryName: string | null
+  emoji: string | null
+}

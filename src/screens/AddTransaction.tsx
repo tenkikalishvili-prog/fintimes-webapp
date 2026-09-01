@@ -1,15 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Article, CategoryGroup, Subcategory } from '../types'
 import { ARTICLE_LABELS } from '../types'
-import { useCategories, useCreateTransaction } from '../lib/queries'
+import { useCategories, useCreateTransaction, useSmartParse } from '../lib/queries'
 import { SkeletonBlock, ErrorState } from '../components/States'
 import { haptic } from '../lib/telegram'
 import { money } from '../lib/format'
 
 const ARTICLES: Article[] = ['expense', 'income', 'debt']
 
-/** Двухшаговый ввод: Статья → Категория(группа) → Подкатегория → Сумма. */
+/** Двухшаговый ввод: Статья → Категория(группа) → Подкатегория → Сумма.
+ *  Плюс поле умного ввода: «кофе 350» → предзаполняет сумму, статью и категорию. */
 export function AddTransaction() {
   const navigate = useNavigate()
   const [step, setStep] = useState<1 | 2>(1)
@@ -18,8 +19,54 @@ export function AddTransaction() {
   const [group, setGroup] = useState<CategoryGroup | null>(null)
   const [sub, setSub] = useState<Subcategory | null>(null)
 
+  // ── Умный ввод ───────────────────────────────────────────────────────
+  const [smartText, setSmartText] = useState('')
+  const [smartNote, setSmartNote] = useState<string | null>(null)
+  // Отложенный матч: подкатегория придёт из разбора, а список категорий
+  // нужной статьи может ещё грузиться после смены article — резолвим в эффекте
+  // (state, а не ref: смена должна перезапускать эффект).
+  const [pendingMatch, setPendingMatch] = useState<{ group: string; subId: number } | null>(null)
+  const smart = useSmartParse()
+
   const cats = useCategories(article)
   const create = useCreateTransaction()
+
+  // Как только загрузились категории нужной статьи — применяем отложенный матч.
+  useEffect(() => {
+    if (!pendingMatch || cats.isPending || !cats.data) return
+    const g = cats.data.find((x) => x.group === pendingMatch.group)
+    const s = g?.subcategories.find((x) => x.id === pendingMatch.subId)
+    if (g && s) {
+      setGroup(g)
+      setSub(s)
+      setStep(2)
+      haptic('medium')
+    }
+    setPendingMatch(null) // резолвили (или не нашли) — не повторяем
+  }, [pendingMatch, cats.data, cats.isPending])
+
+  const runSmart = async () => {
+    const text = smartText.trim()
+    if (!text || smart.isPending) return
+    setSmartNote(null)
+    try {
+      const res = await smart.mutateAsync(text)
+      if (res.amount != null) setAmount(String(res.amount))
+      setArticle(res.article)
+      if (res.matched && res.categoryId != null && res.group && res.amount != null) {
+        // Есть и сумма, и категория → прыгаем на шаг 2, готово к сохранению.
+        setPendingMatch({ group: res.group, subId: res.categoryId })
+        setSmartText('')
+      } else if (res.amount == null) {
+        setSmartNote('Не понял сумму — впиши её вручную ниже 👇')
+      } else {
+        setSmartNote(`Сумму понял (${money(res.amount)}), а категорию — нет. Выбери ниже 👇`)
+        setSmartText('')
+      }
+    } catch {
+      setSmartNote('Не удалось разобрать. Попробуй ещё раз или введи вручную.')
+    }
+  }
 
   const close = () => navigate(-1)
 
@@ -54,6 +101,34 @@ export function AddTransaction() {
               <button className="close" onClick={close} aria-label="Закрыть">
                 ✕
               </button>
+            </div>
+
+            <div className="smart-add">
+              <div className="smart-row">
+                <span className="smart-ico">✨</span>
+                <input
+                  className="smart-input"
+                  placeholder="кофе 350, такси 420, зарплата…"
+                  value={smartText}
+                  onChange={(e) => {
+                    setSmartText(e.target.value)
+                    if (smartNote) setSmartNote(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') runSmart()
+                  }}
+                  enterKeyHint="done"
+                />
+                <button
+                  className="smart-go"
+                  onClick={runSmart}
+                  disabled={!smartText.trim() || smart.isPending}
+                  aria-label="Разобрать"
+                >
+                  {smart.isPending ? '…' : '→'}
+                </button>
+              </div>
+              {smartNote && <div className="smart-note">{smartNote}</div>}
             </div>
 
             <div className="seg" style={{ marginBottom: 16 }}>
