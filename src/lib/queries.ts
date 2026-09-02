@@ -4,6 +4,9 @@ import { api } from './api'
 import type {
   Analytics,
   Article,
+  Debt,
+  DebtInput,
+  DebtUpdateInput,
   HistoryFilters,
   BudgetGroupView,
   BudgetLine,
@@ -38,6 +41,7 @@ export const keys = {
   categories: (article: Article) => ['categories', article] as const,
   transactions: (month?: string) => ['transactions', month ?? 'all'] as const,
   history: (filters: HistoryFilters) => ['history', filters] as const,
+  debts: (includeClosed: boolean) => ['debts', includeClosed] as const,
   settings: ['settings'] as const,
 }
 
@@ -146,6 +150,39 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: (id: number) => api.del<void>(`/api/transactions/${id}`),
     onSuccess: () => invalidateMoney(qc),
+  })
+}
+
+// ── Долги (направление C, S8) ──────────────────────────────────────────────
+export function useDebts(includeClosed = false) {
+  return useQuery({
+    queryKey: keys.debts(includeClosed),
+    queryFn: () => api.get<Debt[]>(`/api/debts${qs({ includeClosed: includeClosed ? 'true' : undefined })}`),
+  })
+}
+
+export function useCreateDebt() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: DebtInput) => api.post<Debt>('/api/debts', body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
+  })
+}
+
+export function useUpdateDebt() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: DebtUpdateInput }) =>
+      api.patch<Debt>(`/api/debts/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
+  })
+}
+
+export function useDeleteDebt() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.del<void>(`/api/debts/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
   })
 }
 

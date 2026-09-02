@@ -172,6 +172,52 @@ export interface HistoryFilters {
   q?: string
 }
 
+/** Направление долга: owe — я должен кому-то; lent — мне должны. */
+export type DebtDirection = 'owe' | 'lent'
+
+export const DEBT_DIRECTION_LABELS: Record<DebtDirection, string> = {
+  owe: 'Я должен',
+  lent: 'Мне должны',
+}
+
+/** Карточка долга из реестра (направление C, S8). Отдельная сущность, не операция. */
+export interface Debt {
+  id: number
+  direction: DebtDirection
+  /** Кому / кто должен. */
+  counterparty: string
+  /** Изначальная сумма долга, ₽. */
+  amount: number
+  /** Погашено на данный момент, ₽ (S9; пока 0). */
+  paid: number
+  /** Остаток = amount − paid, ₽. */
+  remaining: number
+  /** Срок возврата, ISO YYYY-MM-DD. null — без срока. */
+  dueDate: string | null
+  note: string | null
+  /** Долг закрыт (возвращён). */
+  isClosed: boolean
+}
+
+/** Данные создания долга. */
+export interface DebtInput {
+  direction: DebtDirection
+  counterparty: string
+  amount: number
+  dueDate?: string
+  note?: string
+}
+
+/** Частичное изменение долга. Присылаем только изменённые поля. */
+export interface DebtUpdateInput {
+  direction?: DebtDirection
+  counterparty?: string
+  amount?: number
+  dueDate?: string
+  note?: string
+  isClosed?: boolean
+}
+
 /** Статус бюджета — единственное место, где живёт светофор. */
 export type BudgetStatus = 'ok' | 'warn' | 'over'
 

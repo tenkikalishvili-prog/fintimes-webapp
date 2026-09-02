@@ -7,6 +7,7 @@ import { More } from './screens/More'
 import { AddTransaction } from './screens/AddTransaction'
 import { EditTransaction } from './screens/EditTransaction'
 import { History } from './screens/History'
+import { Debts } from './screens/Debts'
 import { Settings } from './screens/Settings'
 import { Onboarding } from './screens/Onboarding'
 import { useMe } from './lib/queries'
@@ -34,6 +35,7 @@ export default function App() {
       {/* Модальные экраны без таббара */}
       <Route path="/add" element={<AddTransaction />} />
       <Route path="/history" element={<History />} />
+      <Route path="/debts" element={<Debts />} />
       <Route path="/edit/:id" element={<EditTransaction />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
