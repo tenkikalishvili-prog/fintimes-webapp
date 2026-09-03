@@ -39,6 +39,8 @@ export interface NotificationSettings {
   morningHour: number
   eveningEnabled: boolean
   eveningHour: number
+  /** Напоминания о платежах и долгах (S11) — в утренний час. */
+  remindersEnabled: boolean
 }
 
 /** Частичное обновление настроек уведомлений (любое поле опционально). */
@@ -48,6 +50,7 @@ export interface NotificationSettingsInput {
   morningHour?: number
   eveningEnabled?: boolean
   eveningHour?: number
+  remindersEnabled?: boolean
 }
 
 export interface TopSpend {
@@ -208,6 +211,20 @@ export interface DebtInput {
   note?: string
 }
 
+/** Один возврат по долгу частями (S9). */
+export interface DebtPayment {
+  id: number
+  amount: number
+  /** Дата возврата, ISO YYYY-MM-DD. */
+  date: string
+}
+
+/** Данные записи возврата. date опционально (по умолчанию — сегодня). */
+export interface DebtPaymentInput {
+  amount: number
+  date?: string
+}
+
 /** Частичное изменение долга. Присылаем только изменённые поля. */
 export interface DebtUpdateInput {
   direction?: DebtDirection
@@ -216,6 +233,44 @@ export interface DebtUpdateInput {
   dueDate?: string
   note?: string
   isClosed?: boolean
+}
+
+/** Обязательный платёж (направление C, S10): регулярное ежемесячное обязательство. */
+export interface Bill {
+  id: number
+  title: string
+  amount: number
+  /** Число месяца-срок (1–31). */
+  dueDay: number
+  /** Подкатегория расхода, куда пишется операция при оплате. */
+  categoryId: number
+  categoryName: string
+  /** Категория (группа) подкатегории. */
+  group: string
+  emoji: string | null
+  note: string | null
+  isActive: boolean
+  /** Оплачен ли за выбранный месяц. */
+  paid: boolean
+}
+
+/** Данные создания платежа. */
+export interface BillInput {
+  title: string
+  amount: number
+  dueDay: number
+  categoryId: number
+  note?: string
+}
+
+/** Частичное изменение платежа. */
+export interface BillUpdateInput {
+  title?: string
+  amount?: number
+  dueDay?: number
+  categoryId?: number
+  note?: string
+  isActive?: boolean
 }
 
 /** Статус бюджета — единственное место, где живёт светофор. */

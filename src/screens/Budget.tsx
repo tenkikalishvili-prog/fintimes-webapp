@@ -12,15 +12,17 @@ import {
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { haptic } from '../lib/telegram'
 import { ApiError } from '../lib/api'
-import type { BudgetGroupView, BudgetSub } from '../types'
+import type { Article, BudgetGroupView, BudgetSub } from '../types'
 
-// Экран «Бюджет» работает с расходными категориями (по ним считаются лимиты).
-const ARTICLE = 'expense' as const
-// Служебная группа: по ней считается дневной лимит — удалять её нельзя.
+// Служебная группа расходов: по ней считается дневной лимит — удалять её нельзя.
 const SERVICE_GROUP = 'Траты'
 
 export function Budget() {
-  const { data, isPending, isError, refetch } = useBudgetOverview()
+  // Статья экрана: расходы (с лимитами) или доходы (без лимитов, только суммы).
+  const [article, setArticle] = useState<Article>('expense')
+  const isIncome = article === 'income'
+
+  const { data, isPending, isError, refetch } = useBudgetOverview(undefined, article)
   const [active, setActive] = useState(0)
   const [editing, setEditing] = useState<BudgetSub | null>(null)
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
@@ -45,10 +47,20 @@ export function Budget() {
     if (i !== active) setActive(i)
   }
 
+  // Переключение статьи: сбрасываем карусель в начало.
+  const switchArticle = (a: Article) => {
+    if (a === article) return
+    haptic('light')
+    setArticle(a)
+    setActive(0)
+    const el = carRef.current
+    if (el) el.scrollLeft = 0
+  }
+
   return (
     <>
       <header className="apphead">
-        <div className="mo">Бюджет</div>
+        <div className="mo">{isIncome ? 'Доходы' : 'Бюджет'}</div>
         {data && data.length > 0 && (
           <button className="head-add" onClick={() => { haptic('light'); setAddingGroup(true) }}>
             ＋ Категория
@@ -56,13 +68,27 @@ export function Budget() {
         )}
       </header>
 
+      {/* Тумблер статьи. Расходы — с лимитами; Доходы — категории с суммами полученного. */}
+      <div className="seg" style={{ marginBottom: 16 }}>
+        <button className={`s${!isIncome ? ' on' : ''}`} onClick={() => switchArticle('expense')}>
+          Расходы
+        </button>
+        <button className={`s${isIncome ? ' on' : ''}`} onClick={() => switchArticle('income')}>
+          Доходы
+        </button>
+      </div>
+
       {isPending ? (
         <SkeletonBlock rows={5} />
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : data.length === 0 ? (
         <div className="block">
-          <EmptyState emoji="🎯" title="Категорий пока нет" sub="Добавьте первую категорию" />
+          <EmptyState
+            emoji={isIncome ? '💰' : '🎯'}
+            title={isIncome ? 'Категорий доходов пока нет' : 'Категорий пока нет'}
+            sub="Добавьте первую категорию"
+          />
           <button className="btn btn-secondary" onClick={() => { haptic('light'); setAddingGroup(true) }}>
             ＋ Новая категория
           </button>
@@ -76,6 +102,7 @@ export function Budget() {
               <CategoryPanel
                 key={g.group}
                 group={g}
+                isIncome={isIncome}
                 onEdit={setEditing}
                 onEditGroup={setEditingGroup}
                 onAddSub={setAddingSubTo}
@@ -99,25 +126,27 @@ export function Budget() {
         </>
       )}
 
-      {editing && <EditSheet sub={editing} onClose={() => setEditing(null)} />}
+      {editing && <EditSheet sub={editing} isIncome={isIncome} onClose={() => setEditing(null)} />}
       {editingGroup !== null && (
-        <GroupSheet group={editingGroup} onClose={() => setEditingGroup(null)} />
+        <GroupSheet group={editingGroup} article={article} onClose={() => setEditingGroup(null)} />
       )}
       {addingSubTo !== null && (
-        <AddSubSheet group={addingSubTo} onClose={() => setAddingSubTo(null)} />
+        <AddSubSheet group={addingSubTo} article={article} onClose={() => setAddingSubTo(null)} />
       )}
-      {addingGroup && <AddGroupSheet onClose={() => setAddingGroup(false)} />}
+      {addingGroup && <AddGroupSheet article={article} onClose={() => setAddingGroup(false)} />}
     </>
   )
 }
 
 function CategoryPanel({
   group,
+  isIncome,
   onEdit,
   onEditGroup,
   onAddSub,
 }: {
   group: BudgetGroupView
+  isIncome: boolean
   onEdit: (s: BudgetSub) => void
   onEditGroup: (g: string) => void
   onAddSub: (g: string) => void
@@ -134,13 +163,13 @@ function CategoryPanel({
           <span className="bgroup-edit">✎</span>
         </button>
         <div className="bgroup-sum">
-          <span>Итого по категории</span>
+          <span>{isIncome ? 'Получено за месяц' : 'Итого по категории'}</span>
           <b>
             {compact(group.spent)}
-            {group.limit > 0 ? ` / ${compact(group.limit)}` : ''}
+            {!isIncome && group.limit > 0 ? ` / ${compact(group.limit)}` : ''}
           </b>
         </div>
-        {group.limit > 0 && (
+        {!isIncome && group.limit > 0 && (
           <div className="bar" style={{ marginTop: 8 }}>
             <i className={fillClass[st]} style={{ width: `${pct}%` }} />
           </div>
@@ -148,11 +177,15 @@ function CategoryPanel({
       </div>
 
       <div className="block">
-        {noLimits && (
+        {isIncome ? (
+          <p className="muted" style={{ fontSize: 12, margin: '0 0 10px' }}>
+            Суммы — сколько получено за месяц. Нажми на подкатегорию, чтобы переименовать или удалить её.
+          </p>
+        ) : noLimits ? (
           <p className="muted" style={{ fontSize: 12, margin: '0 0 10px' }}>
             Лимиты не заданы. Нажми на подкатегорию, чтобы задать лимит или переименовать её.
           </p>
-        )}
+        ) : null}
         {group.subcategories.map((sub) => {
           const s = budgetStatus(sub.spent, sub.limit)
           const p = sub.limit > 0 ? Math.min(100, Math.round((sub.spent / sub.limit) * 100)) : 0
@@ -166,10 +199,12 @@ function CategoryPanel({
                 <span className="ic">{sub.emoji}</span>
                 <span className="nm">{sub.name}</span>
                 <span className="am">
-                  {sub.limit > 0 ? `${compact(sub.spent)} / ${compact(sub.limit)}` : `${compact(sub.spent)} · без лимита`} ✎
+                  {isIncome
+                    ? `${compact(sub.spent)} ✎`
+                    : `${sub.limit > 0 ? `${compact(sub.spent)} / ${compact(sub.limit)}` : `${compact(sub.spent)} · без лимита`} ✎`}
                 </span>
               </div>
-              {sub.limit > 0 && (
+              {!isIncome && sub.limit > 0 && (
                 <div className="bar">
                   <i className={fillClass[s]} style={{ width: `${p}%` }} />
                 </div>
@@ -186,7 +221,7 @@ function CategoryPanel({
   )
 }
 
-function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
+function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boolean; onClose: () => void }) {
   const [name, setName] = useState(sub.name)
   const [amount, setAmount] = useState(sub.limit > 0 ? String(Math.round(sub.limit)) : '')
   const [err, setErr] = useState<string | null>(null)
@@ -200,11 +235,13 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
     const nm = name.trim()
     const amt = Number(amount || 0)
     if (!nm) { setErr('Название не может быть пустым'); return }
-    if (!Number.isFinite(amt) || amt < 0) { setErr('Лимит должен быть числом ≥ 0'); return }
+    if (!isIncome && (!Number.isFinite(amt) || amt < 0)) { setErr('Лимит должен быть числом ≥ 0'); return }
     setErr(null)
     try {
       if (nm !== sub.name) await rename.mutateAsync({ id: sub.subcategoryId, name: nm })
-      if (amt !== Math.round(sub.limit)) await setBudget.mutateAsync({ categoryId: sub.subcategoryId, amount: amt })
+      if (!isIncome && amt !== Math.round(sub.limit)) {
+        await setBudget.mutateAsync({ categoryId: sub.subcategoryId, amount: amt })
+      }
       haptic('medium')
       onClose()
     } catch (e) {
@@ -237,15 +274,19 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
           style={{ marginBottom: 14 }}
         />
 
-        <label className="sheet-label">Лимит в месяц, ₽ <span className="muted">(0 — без лимита)</span></label>
-        <input
-          className="input"
-          inputMode="numeric"
-          placeholder="0"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
-          style={{ marginBottom: 14 }}
-        />
+        {!isIncome && (
+          <>
+            <label className="sheet-label">Лимит в месяц, ₽ <span className="muted">(0 — без лимита)</span></label>
+            <input
+              className="input"
+              inputMode="numeric"
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+              style={{ marginBottom: 14 }}
+            />
+          </>
+        )}
 
         {err && (
           <div className="toast over" style={{ marginBottom: 12 }}>
@@ -255,7 +296,7 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
         )}
 
         <button className="btn btn-primary" disabled={pending} onClick={save}>
-          {pending ? 'Сохраняю…' : `Сохранить · ${money(Number(amount || 0))}`}
+          {pending ? 'Сохраняю…' : isIncome ? 'Сохранить' : `Сохранить · ${money(Number(amount || 0))}`}
         </button>
 
         {confirmDel ? (
@@ -282,13 +323,14 @@ function EditSheet({ sub, onClose }: { sub: BudgetSub; onClose: () => void }) {
   )
 }
 
-function GroupSheet({ group, onClose }: { group: string; onClose: () => void }) {
+function GroupSheet({ group, article, onClose }: { group: string; article: Article; onClose: () => void }) {
   const [name, setName] = useState(group)
   const [err, setErr] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState(false)
   const rename = useRenameGroup()
   const del = useDeleteGroup()
-  const isService = group === SERVICE_GROUP
+  // Служебная «Траты» защищена только среди расходов.
+  const isService = article === 'expense' && group === SERVICE_GROUP
   const pending = rename.isPending || del.isPending
 
   const save = async () => {
@@ -297,7 +339,7 @@ function GroupSheet({ group, onClose }: { group: string; onClose: () => void }) 
     if (nm === group) { onClose(); return }
     setErr(null)
     try {
-      await rename.mutateAsync({ oldName: group, newName: nm })
+      await rename.mutateAsync({ oldName: group, newName: nm, article })
       haptic('medium')
       onClose()
     } catch (e) {
@@ -308,7 +350,7 @@ function GroupSheet({ group, onClose }: { group: string; onClose: () => void }) 
   const remove = async () => {
     setErr(null)
     try {
-      await del.mutateAsync({ article: ARTICLE, name: group })
+      await del.mutateAsync({ article, name: group })
       haptic('medium')
       onClose()
     } catch {
@@ -368,7 +410,7 @@ function GroupSheet({ group, onClose }: { group: string; onClose: () => void }) 
   )
 }
 
-function AddSubSheet({ group, onClose }: { group: string; onClose: () => void }) {
+function AddSubSheet({ group, article, onClose }: { group: string; article: Article; onClose: () => void }) {
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -379,7 +421,7 @@ function AddSubSheet({ group, onClose }: { group: string; onClose: () => void })
     if (!nm) { setErr('Введите название'); return }
     setErr(null)
     try {
-      await create.mutateAsync({ article: ARTICLE, group, name: nm, emoji: emoji.trim() || undefined })
+      await create.mutateAsync({ article, group, name: nm, emoji: emoji.trim() || undefined })
       haptic('medium')
       onClose()
     } catch (e) {
@@ -426,12 +468,13 @@ function AddSubSheet({ group, onClose }: { group: string; onClose: () => void })
   )
 }
 
-function AddGroupSheet({ onClose }: { onClose: () => void }) {
+function AddGroupSheet({ article, onClose }: { article: Article; onClose: () => void }) {
   const [group, setGroup] = useState('')
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const create = useCreateSubcategory()
+  const isIncome = article === 'income'
 
   const save = async () => {
     const gr = group.trim()
@@ -440,7 +483,7 @@ function AddGroupSheet({ onClose }: { onClose: () => void }) {
     if (!nm) { setErr('Введите название первой подкатегории'); return }
     setErr(null)
     try {
-      await create.mutateAsync({ article: ARTICLE, group: gr, name: nm, emoji: emoji.trim() || undefined })
+      await create.mutateAsync({ article, group: gr, name: nm, emoji: emoji.trim() || undefined })
       haptic('medium')
       onClose()
     } catch (e) {
@@ -452,7 +495,7 @@ function AddGroupSheet({ onClose }: { onClose: () => void }) {
     <div className="scrim" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
-        <h4>Новая категория</h4>
+        <h4>{isIncome ? 'Новая категория дохода' : 'Новая категория'}</h4>
         <label className="sheet-label">Категория объединяет подкатегории. Добавьте первую подкатегорию сразу.</label>
 
         <input

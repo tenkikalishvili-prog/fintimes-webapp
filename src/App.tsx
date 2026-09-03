@@ -8,6 +8,7 @@ import { AddTransaction } from './screens/AddTransaction'
 import { EditTransaction } from './screens/EditTransaction'
 import { History } from './screens/History'
 import { Debts } from './screens/Debts'
+import { Payments } from './screens/Payments'
 import { Settings } from './screens/Settings'
 import { Onboarding } from './screens/Onboarding'
 import { useMe } from './lib/queries'
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/add" element={<AddTransaction />} />
       <Route path="/history" element={<History />} />
       <Route path="/debts" element={<Debts />} />
+      <Route path="/payments" element={<Payments />} />
       <Route path="/edit/:id" element={<EditTransaction />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>

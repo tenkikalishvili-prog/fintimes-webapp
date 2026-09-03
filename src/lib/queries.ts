@@ -4,8 +4,13 @@ import { api } from './api'
 import type {
   Analytics,
   Article,
+  Bill,
+  BillInput,
+  BillUpdateInput,
   Debt,
   DebtInput,
+  DebtPayment,
+  DebtPaymentInput,
   DebtUpdateInput,
   HistoryFilters,
   BudgetGroupView,
@@ -37,11 +42,14 @@ export const keys = {
   overview: (month?: string) => ['overview', month ?? 'current'] as const,
   analytics: (month?: string) => ['analytics', month ?? 'current'] as const,
   budget: (month?: string, group?: string) => ['budget', month ?? 'current', group ?? 'Траты'] as const,
-  budgetOverview: (month?: string) => ['budget-overview', month ?? 'current'] as const,
+  budgetOverview: (month?: string, article: Article = 'expense') =>
+    ['budget-overview', month ?? 'current', article] as const,
   categories: (article: Article) => ['categories', article] as const,
   transactions: (month?: string) => ['transactions', month ?? 'all'] as const,
   history: (filters: HistoryFilters) => ['history', filters] as const,
   debts: (includeClosed: boolean) => ['debts', includeClosed] as const,
+  debtPayments: (debtId: number) => ['debt-payments', debtId] as const,
+  bills: (month?: string) => ['bills', month ?? 'current'] as const,
   settings: ['settings'] as const,
 }
 
@@ -71,11 +79,15 @@ export function useBudget(month?: string, group?: string) {
   })
 }
 
-/** Полный обзор бюджета: все категории со своими подкатегориями (для карусели). */
-export function useBudgetOverview(month?: string) {
+/**
+ * Полный обзор категорий: все категории со своими подкатегориями (для карусели).
+ * article='expense' — с лимитами (бюджет); article='income' — доходные категории
+ * с суммами полученного за месяц (лимитов нет).
+ */
+export function useBudgetOverview(month?: string, article: Article = 'expense') {
   return useQuery({
-    queryKey: keys.budgetOverview(month),
-    queryFn: () => api.get<BudgetGroupView[]>(`/api/budget/overview${qs({ month })}`),
+    queryKey: keys.budgetOverview(month, article),
+    queryFn: () => api.get<BudgetGroupView[]>(`/api/budget/overview${qs({ month, article })}`),
   })
 }
 
@@ -186,6 +198,84 @@ export function useDeleteDebt() {
   })
 }
 
+// ── Возвраты долга частями (S9) ────────────────────────────────────────────
+/** История возвратов конкретного долга (свежие сверху). */
+export function useDebtPayments(debtId: number) {
+  return useQuery({
+    queryKey: keys.debtPayments(debtId),
+    queryFn: () => api.get<DebtPayment[]>(`/api/debts/${debtId}/payments`),
+  })
+}
+
+/** После изменения платежей — обновляем и список долгов, и историю платежей долга. */
+function invalidateDebtPayments(qc: ReturnType<typeof useQueryClient>, debtId: number) {
+  qc.invalidateQueries({ queryKey: ['debts'] })
+  qc.invalidateQueries({ queryKey: keys.debtPayments(debtId) })
+}
+
+export function useAddDebtPayment(debtId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: DebtPaymentInput) => api.post<Debt>(`/api/debts/${debtId}/payments`, body),
+    onSuccess: () => invalidateDebtPayments(qc, debtId),
+  })
+}
+
+export function useDeleteDebtPayment(debtId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (paymentId: number) => api.del<Debt>(`/api/debts/${debtId}/payments/${paymentId}`),
+    onSuccess: () => invalidateDebtPayments(qc, debtId),
+  })
+}
+
+// ── Обязательные платежи (направление C, S10) ──────────────────────────────
+/** Платежи с отметкой оплаты за месяц (по умолчанию — текущий). */
+export function useBills(month?: string) {
+  return useQuery({
+    queryKey: keys.bills(month),
+    queryFn: () => api.get<Bill[]>(`/api/bills${qs({ month })}`),
+  })
+}
+
+export function useCreateBill() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: BillInput) => api.post<Bill>('/api/bills', body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bills'] }),
+  })
+}
+
+export function useUpdateBill() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: BillUpdateInput }) =>
+      api.patch<Bill>(`/api/bills/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bills'] }),
+  })
+}
+
+export function useDeleteBill() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.del<void>(`/api/bills/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bills'] }),
+  })
+}
+
+/** Отметка «оплачено» за месяц: создаёт/удаляет расходную операцию → пересчёт всех сумм. */
+export function useSetBillPaid() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, month, paid }: { id: number; month: string; paid: boolean }) =>
+      api.patch<Bill>(`/api/bills/${id}/paid`, { month, paid }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bills'] })
+      invalidateMoney(qc)
+    },
+  })
+}
+
 /** Завершение лёгкого онбординга: сохраняет доход и лимит трат, обновляет /me и суммы. */
 export function useCompleteOnboarding() {
   const qc = useQueryClient()
@@ -285,8 +375,8 @@ export function useDeleteGroup() {
 export function useRenameGroup() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
-      api.patch<{ group: string; renamed: number }>('/api/categories/group', { oldName, newName }),
+    mutationFn: ({ oldName, newName, article = 'expense' }: { oldName: string; newName: string; article?: Article }) =>
+      api.patch<{ group: string; renamed: number }>('/api/categories/group', { oldName, newName, article }),
     onSuccess: () => {
       invalidateMoney(qc)
       qc.invalidateQueries({ queryKey: ['categories'] })

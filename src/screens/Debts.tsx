@@ -1,10 +1,18 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCreateDebt, useDebts, useDeleteDebt, useUpdateDebt } from '../lib/queries'
+import {
+  useAddDebtPayment,
+  useCreateDebt,
+  useDebtPayments,
+  useDebts,
+  useDeleteDebt,
+  useDeleteDebtPayment,
+  useUpdateDebt,
+} from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { ApiError } from '../lib/api'
 import { haptic } from '../lib/telegram'
-import { money, formatTxDate } from '../lib/format'
+import { money, compact, formatTxDate } from '../lib/format'
 import { DEBT_DIRECTION_LABELS } from '../types'
 import type { Debt, DebtDirection, DebtInput, DebtUpdateInput } from '../types'
 
@@ -136,12 +144,24 @@ function DebtRow({ debt, onTap }: { debt: Debt; onTap: () => void }) {
     meta = meta ? `${due} · ${meta}` : due
   }
 
+  // Прогресс частичного возврата — показываем только у открытых с начатыми выплатами.
+  const partial = !debt.isClosed && debt.paid > 0 && debt.amount > 0
+  const pct = partial ? Math.min(100, Math.round((debt.paid / debt.amount) * 100)) : 0
+
   return (
     <button className={`debt-row${debt.isClosed ? ' closed' : ''}`} onClick={onTap}>
       <div className="dr-ava">{debt.isClosed ? '✓' : initial}</div>
       <div className="dr-mid">
         <div className="dr-name">{debt.counterparty}</div>
         {meta && <div className={`dr-meta${overdue ? ' overdue' : ''}`}>{meta}</div>}
+        {partial && (
+          <div className="dr-prog">
+            <div className="bar">
+              <i className="fill-g" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="dr-prog-lbl">{compact(debt.paid)} из {compact(debt.amount)}</span>
+          </div>
+        )}
       </div>
       <div className="dr-amt">{money(debt.remaining)}</div>
     </button>
@@ -289,6 +309,8 @@ function DebtSheet({
           {pending ? 'Сохраняю…' : `Сохранить · ${money(Number(amount || 0))}`}
         </button>
 
+        {isEdit && <PaymentsSection debt={debt!} />}
+
         {isEdit && (
           <button
             className="btn btn-secondary"
@@ -318,6 +340,112 @@ function DebtSheet({
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+/** Секция «Возвраты частями» (S9): прогресс, запись возврата, история платежей. */
+function PaymentsSection({ debt }: { debt: Debt }) {
+  const [amount, setAmount] = useState('')
+  const [payDate, setPayDate] = useState(todayISO())
+  const [err, setErr] = useState<string | null>(null)
+
+  const { data: payments, isPending } = useDebtPayments(debt.id)
+  const add = useAddDebtPayment(debt.id)
+  const del = useDeleteDebtPayment(debt.id)
+  const busy = add.isPending || del.isPending
+
+  // Погашено считаем по живой истории платежей (не по возможно устаревшему debt.paid).
+  const paid = useMemo(
+    () => (payments ?? []).reduce((s, p) => s + p.amount, 0),
+    [payments],
+  )
+  const remaining = Math.max(0, Math.round((debt.amount - paid) * 100) / 100)
+  const pct = debt.amount > 0 ? Math.min(100, Math.round((paid / debt.amount) * 100)) : 0
+
+  const record = async () => {
+    const amt = Number(amount || 0)
+    if (!Number.isFinite(amt) || amt <= 0) { setErr('Сумма возврата должна быть больше 0'); return }
+    if (amt > remaining) { setErr(`Больше остатка (${money(remaining)})`); return }
+    setErr(null)
+    try {
+      await add.mutateAsync({ amount: amt, date: payDate || undefined })
+      haptic('medium')
+      setAmount('')
+      setPayDate(todayISO())
+    } catch {
+      setErr('Не удалось записать возврат')
+    }
+  }
+
+  const removePayment = async (id: number) => {
+    setErr(null)
+    try {
+      await del.mutateAsync(id)
+      haptic('light')
+    } catch {
+      setErr('Не удалось удалить возврат')
+    }
+  }
+
+  return (
+    <div className="pay-sec">
+      <div className="pay-head">
+        <span className="sheet-label" style={{ margin: 0 }}>Возвраты частями</span>
+        <span className="pay-prog-lbl">{compact(paid)} из {compact(debt.amount)}</span>
+      </div>
+      <div className="bar" style={{ marginBottom: 12 }}>
+        <i className="fill-g" style={{ width: `${pct}%` }} />
+      </div>
+
+      {remaining > 0 ? (
+        <div className="pay-add">
+          <input
+            className="input pay-amt"
+            inputMode="numeric"
+            placeholder={`Сумма (остаток ${compact(remaining)})`}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+          />
+          <input
+            className="input pay-date"
+            type="date"
+            value={payDate}
+            onChange={(e) => setPayDate(e.target.value)}
+          />
+          <button className="btn btn-secondary pay-go" disabled={busy || !amount} onClick={record}>
+            {add.isPending ? '…' : 'Внести'}
+          </button>
+        </div>
+      ) : (
+        <p className="muted" style={{ fontSize: 12, margin: '0 0 6px' }}>Долг погашен полностью 🎉</p>
+      )}
+
+      {err && (
+        <div className="toast over" style={{ margin: '10px 0 0' }}>
+          <span className="ti">⚠️</span>
+          <span>{err}</span>
+        </div>
+      )}
+
+      {isPending ? null : payments && payments.length > 0 ? (
+        <div className="pay-list">
+          {payments.map((p) => (
+            <div key={p.id} className="pay-row">
+              <span className="pay-row-date">{formatTxDate(p.date)}</span>
+              <span className="pay-row-amt">{money(p.amount)}</span>
+              <button
+                className="pay-row-del"
+                disabled={busy}
+                onClick={() => removePayment(p.id)}
+                aria-label="Удалить возврат"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

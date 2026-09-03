@@ -20,6 +20,7 @@ export function Settings() {
   const [morningHour, setMorningHour] = useState(9)
   const [eveningOn, setEveningOn] = useState(true)
   const [eveningHour, setEveningHour] = useState(23)
+  const [remindersOn, setRemindersOn] = useState(true)
 
   // Актуальный час в ref: серия быстрых тапов «+/−» накапливается корректно,
   // не завися от асинхронного ре-рендера (иначе два тапа читали бы одно значение).
@@ -33,6 +34,7 @@ export function Settings() {
     setMorningHour(data.morningHour)
     setEveningOn(data.eveningEnabled)
     setEveningHour(data.eveningHour)
+    setRemindersOn(data.remindersEnabled)
     morningRef.current = data.morningHour
     eveningRef.current = data.eveningHour
   }, [data])
@@ -66,14 +68,17 @@ export function Settings() {
     }
   }
 
-  const toggle = (which: 'morning' | 'evening', on: boolean) => {
+  const toggle = (which: 'morning' | 'evening' | 'reminders', on: boolean) => {
     haptic('medium')
     if (which === 'morning') {
       setMorningOn(on)
       patch({ morningEnabled: on })
-    } else {
+    } else if (which === 'evening') {
       setEveningOn(on)
       patch({ eveningEnabled: on })
+    } else {
+      setRemindersOn(on)
+      patch({ remindersEnabled: on })
     }
   }
 
@@ -176,6 +181,26 @@ export function Settings() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="set-div" />
+
+              {/* Напоминания о платежах и долгах (S11) */}
+              <div className="set-item">
+                <div className="set-top">
+                  <div className="set-txt">
+                    <div className="set-name">📅 Напоминания о платежах и долгах</div>
+                    <div className="set-sub">В утренний час, если есть ближайшие сроки</div>
+                  </div>
+                  <div className="seg set-seg">
+                    <button className={`s${remindersOn ? ' on' : ''}`} onClick={() => toggle('reminders', true)}>
+                      Вкл
+                    </button>
+                    <button className={`s${!remindersOn ? ' on' : ''}`} onClick={() => toggle('reminders', false)}>
+                      Выкл
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 

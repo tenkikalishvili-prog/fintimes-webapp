@@ -331,7 +331,7 @@ a{color:inherit;text-decoration:none}
 @keyframes sheet-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .sheet{background:var(--bg2);border-top-left-radius:24px;border-top-right-radius:24px;
   border-top:1px solid var(--line);padding:8px 16px calc(20px + env(safe-area-inset-bottom));
-  box-shadow:var(--sh-pop)}
+  box-shadow:var(--sh-pop);max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 16px}
 .sheet h4{font-size:16px;font-weight:800;margin:0 0 16px}
 .sheet-label{display:block;font-size:11px;color:var(--faint);margin-bottom:8px;
@@ -432,3 +432,55 @@ a{color:inherit;text-decoration:none}
 .debt-row.closed .dr-ava{background:var(--ok-dim);color:var(--ok)}
 .debt-closed-cap{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);
   font-weight:700;margin:6px 4px 8px}
+
+/* Прогресс частичного возврата в строке долга (S9) */
+.debt-row .dr-prog{display:flex;align-items:center;gap:8px;margin-top:7px}
+.debt-row .dr-prog .bar{flex:1;margin-top:0}
+.dr-prog-lbl{font-size:11px;color:var(--faint);font-weight:600;white-space:nowrap}
+
+/* Секция «Возвраты частями» в шите долга (S9) */
+.pay-sec{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.pay-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.pay-prog-lbl{font-size:12px;color:var(--muted);font-weight:700}
+.pay-add{display:flex;gap:8px}
+.pay-add .pay-amt{flex:1;min-width:0}
+.pay-add .pay-date{flex:0 0 42%;min-width:0}
+.pay-add .pay-go{flex:0 0 auto;width:auto;padding:0 16px}
+.pay-list{margin-top:12px;display:flex;flex-direction:column}
+.pay-row{display:flex;align-items:center;gap:12px;padding:9px 2px}
+.pay-row+.pay-row{border-top:1px solid var(--line)}
+.pay-row-date{flex:1;font-size:13px;color:var(--muted);font-weight:600}
+.pay-row-amt{font-size:14px;font-weight:800;color:var(--ok)}
+.pay-row-del{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:none;
+  background:var(--card2);color:var(--faint);font-size:12px;cursor:pointer;line-height:1}
+.pay-row-del:active{background:var(--over);color:#fff}
+
+/* ---------- Обязательные платежи (направление C, S10) ---------- */
+/* select со стрелкой (как .set-tz) */
+.select{cursor:pointer;-webkit-appearance:none;appearance:none;font-weight:600;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23908c9e' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.pay-sum{display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--line);
+  border-radius:20px;padding:16px 18px;margin-bottom:16px;position:relative;overflow:hidden}
+.pay-sum::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.pay-sum .ps-cap{font-size:12px;color:var(--muted);font-weight:700}
+.pay-sum .ps-amt{font-size:26px;font-weight:800;letter-spacing:-.5px;color:var(--text)}
+.pay-sum .ps-meta{font-size:12px;color:var(--faint);font-weight:600}
+.bill-list{padding:6px}
+.bill-row{display:flex;align-items:center;gap:10px}
+.bill-row+.bill-row{border-top:1px solid var(--line)}
+.bill-check{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);
+  background:none;color:#fff;font-size:14px;font-weight:800;cursor:pointer;line-height:1;
+  display:flex;align-items:center;justify-content:center}
+.bill-check.on{background:var(--ok);border-color:var(--ok)}
+.bill-check:disabled{opacity:.5;cursor:default}
+.bill-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;background:none;border:none;
+  padding:12px 2px;cursor:pointer;text-align:left}
+.bill-main:active{background:var(--card2)}
+.bill-mid{flex:1;min-width:0}
+.bill-title{font-size:14.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bill-meta{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bill-meta.overdue{color:var(--over)}
+.bill-amt{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap}
+.bill-row.paid .bill-title,.bill-row.paid .bill-amt{color:var(--muted)}
+.bill-row.paid .bill-amt{text-decoration:line-through}
