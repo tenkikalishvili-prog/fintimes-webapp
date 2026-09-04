@@ -182,6 +182,7 @@ function DebtSheet({
   const [dir, setDir] = useState<DebtDirection>(debt?.direction ?? initialDir)
   const [counterparty, setCounterparty] = useState(debt?.counterparty ?? '')
   const [amount, setAmount] = useState(debt ? String(Math.round(debt.amount)) : '')
+  const [startedOn, setStartedOn] = useState(debt?.startedOn ?? todayISO())
   const [dueDate, setDueDate] = useState(debt?.dueDate ?? '')
   const [note, setNote] = useState(debt?.note ?? '')
   const [err, setErr] = useState<string | null>(null)
@@ -204,6 +205,7 @@ function DebtSheet({
           direction: dir,
           counterparty: name,
           amount: amt,
+          startedOn: startedOn || undefined,
           dueDate: dueDate || undefined,
           note: note.trim(),
         }
@@ -213,6 +215,7 @@ function DebtSheet({
           direction: dir,
           counterparty: name,
           amount: amt,
+          startedOn: startedOn || undefined,
           dueDate: dueDate || undefined,
           note: note.trim() || undefined,
         }
@@ -277,6 +280,15 @@ function DebtSheet({
           placeholder="0"
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+          style={{ marginBottom: 14 }}
+        />
+
+        <label className="sheet-label">Дата движения <span className="muted">(когда деньги перешли)</span></label>
+        <input
+          className="input"
+          type="date"
+          value={startedOn}
+          onChange={(e) => setStartedOn(e.target.value)}
           style={{ marginBottom: 14 }}
         />
 

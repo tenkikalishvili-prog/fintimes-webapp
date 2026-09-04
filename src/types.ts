@@ -4,13 +4,19 @@
 // В backend строка Category = уровень подкатегории; её id и есть categoryId операции.
 
 /** Статья операции (верхний уровень). Цветом НЕ кодируется. */
-export type Article = 'expense' | 'income' | 'debt'
+export type Article = 'expense' | 'income' | 'debt' | 'goal'
 
 export const ARTICLE_LABELS: Record<Article, string> = {
   expense: 'Расход',
   income: 'Доход',
   debt: 'Долг',
+  goal: 'Цель',
 }
+
+/** Тип движения для рендера строки операции. */
+export type TxKind = 'expense' | 'income' | 'goal' | 'debt'
+/** Направление движения ДС у операций по целям/долгам. */
+export type Flow = 'in' | 'out'
 
 export interface Me {
   id: number
@@ -139,13 +145,24 @@ export interface DeleteResult {
 export interface Transaction {
   id: number
   article: Article
-  categoryId: number
+  /** Тип движения для рендера: expense | income | goal | debt. */
+  kind: TxKind
+  /** Знак движения ДС у операций по целям/долгам: in (+) | out (−). null у доход/расход. */
+  flow: Flow | null
+  /** null у операций по целям/долгам (категории нет). */
+  categoryId: number | null
   categoryName: string
   subcategoryName: string
   emoji: string | null
   amount: number
   date: string // ISO YYYY-MM-DD
   comment: string | null
+  /** Привязка к цели (операция-пополнение). */
+  goalId: number | null
+  /** Привязка к долгу (тело/возврат). */
+  debtId: number | null
+  /** Роль операции долга: principal (тело) | payment (возврат). */
+  debtRole: 'principal' | 'payment' | null
 }
 
 export interface TransactionInput {
@@ -197,6 +214,8 @@ export interface Debt {
   remaining: number
   /** Срок возврата, ISO YYYY-MM-DD. null — без срока. */
   dueDate: string | null
+  /** Дата движения тела (когда деньги перешли), ISO YYYY-MM-DD. */
+  startedOn: string | null
   note: string | null
   /** Долг закрыт (возвращён). */
   isClosed: boolean
@@ -208,6 +227,8 @@ export interface DebtInput {
   counterparty: string
   amount: number
   dueDate?: string
+  /** Дата движения тела долга (по умолчанию сегодня). */
+  startedOn?: string
   note?: string
 }
 
@@ -231,6 +252,7 @@ export interface DebtUpdateInput {
   counterparty?: string
   amount?: number
   dueDate?: string
+  startedOn?: string
   note?: string
   isClosed?: boolean
 }
@@ -271,6 +293,55 @@ export interface BillUpdateInput {
   categoryId?: number
   note?: string
   isActive?: boolean
+}
+
+/** Финансовая цель / накопление (направление D, S13). Отдельная сущность, не операция. */
+export interface Goal {
+  id: number
+  /** На что копим. */
+  title: string
+  /** Сколько нужно всего, ₽. */
+  targetAmount: number
+  /** Накоплено на данный момент, ₽ (сумма пополнений). */
+  saved: number
+  /** Остаток = targetAmount − saved, ₽. */
+  remaining: number
+  /** Срок цели, ISO YYYY-MM-DD. null — без срока. */
+  deadline: string | null
+  note: string | null
+  /** Цель достигнута. */
+  isDone: boolean
+}
+
+/** Данные создания цели. */
+export interface GoalInput {
+  title: string
+  targetAmount: number
+  deadline?: string
+  note?: string
+}
+
+/** Частичное изменение цели. Присылаем только изменённые поля. */
+export interface GoalUpdateInput {
+  title?: string
+  targetAmount?: number
+  deadline?: string
+  note?: string
+  isDone?: boolean
+}
+
+/** Одно пополнение цели (S13). */
+export interface GoalContribution {
+  id: number
+  amount: number
+  /** Дата пополнения, ISO YYYY-MM-DD. */
+  date: string
+}
+
+/** Данные записи пополнения. date опционально (по умолчанию — сегодня). */
+export interface GoalContributionInput {
+  amount: number
+  date?: string
 }
 
 /** Статус бюджета — единственное место, где живёт светофор. */

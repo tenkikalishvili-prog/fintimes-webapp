@@ -26,7 +26,7 @@ export function EditTransaction() {
   const [armedDelete, setArmedDelete] = useState(false)
   // Отложенный матч исходной подкатегории: ждём, пока загрузятся категории статьи.
   const [pendingMatch, setPendingMatch] = useState<{ group: string; subId: number } | null>(
-    tx ? { group: tx.categoryName, subId: tx.categoryId } : null,
+    tx && tx.categoryId != null ? { group: tx.categoryName, subId: tx.categoryId } : null,
   )
 
   const cats = useCategories(article)

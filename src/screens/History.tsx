@@ -14,7 +14,13 @@ const TYPE_PILLS: { key: TypeFilter; label: string }[] = [
   { key: 'expense', label: 'Расход' },
   { key: 'income', label: 'Доход' },
   { key: 'debt', label: 'Долг' },
+  { key: 'goal', label: 'Цель' },
 ]
+
+/** Знак операции: доход и притоки по долгам (мне вернули/занял) — плюс. */
+function isInflow(t: Transaction): boolean {
+  return t.kind === 'income' || t.flow === 'in'
+}
 
 /** Полный экран истории операций: период, тип, категория, поиск, подгрузка, удаление. */
 export function History() {
@@ -35,8 +41,9 @@ export function History() {
     return () => clearTimeout(id)
   }, [search])
 
-  // Категории для чипов показываем только когда выбран конкретный тип (внутри статьи).
-  const catArticle: Article = type === 'all' ? 'expense' : type
+  // Категории для чипов есть только у расхода/дохода (у целей/долгов категорий нет).
+  const hasCats = type === 'expense' || type === 'income'
+  const catArticle: Article = hasCats ? type : 'expense'
   const cats = useCategories(catArticle)
 
   const filters: HistoryFilters = useMemo(
@@ -90,6 +97,9 @@ export function History() {
   const openEdit = (t: Transaction) => {
     if (armed) { setArmed(null); return } // тап по строке отменяет взведённое удаление
     haptic('light')
+    // Операции по целям/долгам редактируются в своих карточках, не в редакторе операций.
+    if (t.goalId != null) { navigate('/goals'); return }
+    if (t.debtId != null) { navigate('/debts'); return }
     navigate(`/edit/${t.id}`, { state: { tx: t } })
   }
 
@@ -155,8 +165,8 @@ export function History() {
           </div>
         </div>
 
-        {/* Категории (в рамках выбранного типа) */}
-        {type !== 'all' && (cats.data?.length ?? 0) > 0 && (
+        {/* Категории (в рамках выбранного типа; у целей/долгов их нет) */}
+        {hasCats && (cats.data?.length ?? 0) > 0 && (
           <div className="chips-scroll">
             <div className="pills">
               <button className={`pill${!group ? ' on' : ''}`} onClick={() => { haptic('light'); setGroup(undefined) }}>
@@ -235,30 +245,44 @@ function renderGrouped(
         </div>,
       )
     }
+    const plus = isInflow(t)
+    // Подпись типа для операций по целям/долгам (у них нет группы-категории).
+    const meta =
+      t.kind === 'goal'
+        ? 'Цель · пополнение'
+        : t.kind === 'debt'
+          ? `Долг · ${t.debtRole === 'principal' ? (plus ? 'занял' : 'дал в долг') : plus ? 'вернули' : 'вернул'}`
+          : t.categoryName
+    // Тело долга удаляется только вместе с карточкой долга — крестик прячем.
+    const canDelete = t.debtRole !== 'principal'
     out.push(
       <div className="txrow tap" key={t.id} onClick={() => openEdit(t)}>
         <div className="tic">{t.emoji ?? '💸'}</div>
         <div className="tmid">
           <div className="tname">{t.subcategoryName}</div>
           <div className="tmeta">
-            {t.categoryName}
-            {t.comment ? ` · ${t.comment}` : ''}
+            {meta}
+            {t.comment && t.kind !== 'goal' && t.kind !== 'debt' ? ` · ${t.comment}` : ''}
           </div>
         </div>
-        <div className={`tamt${t.article === 'income' ? ' plus' : ''}`}>
-          {t.article === 'income' ? '+' : '−'}
+        <div className={`tamt${plus ? ' plus' : ''}`}>
+          {plus ? '+' : '−'}
           {money(t.amount).replace('−', '')}
         </div>
-        <button
-          className={`tx-del${armed === t.id ? ' armed' : ''}`}
-          aria-label="Удалить"
-          onClick={(e) => {
-            e.stopPropagation()
-            armDelete(t.id)
-          }}
-        >
-          {armed === t.id ? 'Удалить?' : '✕'}
-        </button>
+        {canDelete ? (
+          <button
+            className={`tx-del${armed === t.id ? ' armed' : ''}`}
+            aria-label="Удалить"
+            onClick={(e) => {
+              e.stopPropagation()
+              armDelete(t.id)
+            }}
+          >
+            {armed === t.id ? 'Удалить?' : '✕'}
+          </button>
+        ) : (
+          <span className="tx-del-lock" aria-hidden>🔒</span>
+        )}
       </div>,
     )
   }

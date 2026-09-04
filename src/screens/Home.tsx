@@ -146,39 +146,50 @@ export function Home() {
             ) : shown.length === 0 ? (
               <EmptyState emoji="🗒️" title="Пока нет операций" sub="Добавь первую по кнопке ＋ или через бота" />
             ) : (
-              shown.map((t) => (
-                <div className="txrow" key={t.id}>
-                  <div className="tic">{t.emoji ?? '💸'}</div>
-                  <div className="tmid">
-                    <div className="tname">{t.subcategoryName}</div>
-                    <div className="tmeta">
-                      {t.categoryName}
-                      {t.comment ? ` · ${t.comment}` : ''} · {formatTxDate(t.date)}
+              shown.map((t) => {
+                const plus = t.kind === 'income' || t.flow === 'in'
+                const meta =
+                  t.kind === 'goal'
+                    ? 'Цель · пополнение'
+                    : t.kind === 'debt'
+                      ? `Долг · ${t.debtRole === 'principal' ? (plus ? 'занял' : 'дал в долг') : plus ? 'вернули' : 'вернул'}`
+                      : `${t.categoryName}${t.comment ? ` · ${t.comment}` : ''}`
+                const canDelete = t.debtRole !== 'principal'
+                return (
+                  <div className="txrow" key={t.id}>
+                    <div className="tic">{t.emoji ?? '💸'}</div>
+                    <div className="tmid">
+                      <div className="tname">{t.subcategoryName}</div>
+                      <div className="tmeta">{meta} · {formatTxDate(t.date)}</div>
                     </div>
+                    <div className={`tamt${plus ? ' plus' : ''}`}>
+                      {plus ? '+' : '−'}
+                      {money(t.amount).replace('−', '')}
+                    </div>
+                    {canDelete ? (
+                      <button
+                        className={`tx-del${armed === t.id ? ' armed' : ''}`}
+                        aria-label="Удалить"
+                        onClick={() => {
+                          if (armed === t.id) {
+                            haptic('medium')
+                            del.mutate(t.id)
+                            setArmed(null)
+                          } else {
+                            haptic('light')
+                            setArmed(t.id)
+                            setTimeout(() => setArmed((cur) => (cur === t.id ? null : cur)), 3000)
+                          }
+                        }}
+                      >
+                        {armed === t.id ? 'Удалить?' : '✕'}
+                      </button>
+                    ) : (
+                      <span className="tx-del-lock" aria-hidden>🔒</span>
+                    )}
                   </div>
-                  <div className={`tamt${t.article === 'income' ? ' plus' : ''}`}>
-                    {t.article === 'income' ? '+' : '−'}
-                    {money(t.amount).replace('−', '')}
-                  </div>
-                  <button
-                    className={`tx-del${armed === t.id ? ' armed' : ''}`}
-                    aria-label="Удалить"
-                    onClick={() => {
-                      if (armed === t.id) {
-                        haptic('medium')
-                        del.mutate(t.id)
-                        setArmed(null)
-                      } else {
-                        haptic('light')
-                        setArmed(t.id)
-                        setTimeout(() => setArmed((cur) => (cur === t.id ? null : cur)), 3000)
-                      }
-                    }}
-                  >
-                    {armed === t.id ? 'Удалить?' : '✕'}
-                  </button>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </>

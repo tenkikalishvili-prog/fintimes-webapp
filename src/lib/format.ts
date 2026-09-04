@@ -17,7 +17,11 @@ export function compact(value: number): string {
 }
 
 function trim(n: number): string {
-  return n.toFixed(n < 10 ? 2 : n < 100 ? 1 : 0).replace('.', ',').replace(/,?0+$/, '')
+  // Срезаем незначащие нули ТОЛЬКО в дробной части («1.50»→«1.5», «2.00»→«2»),
+  // не трогая целые, оканчивающиеся на нули («300»→«300», «180»→«180»).
+  let s = n.toFixed(n < 10 ? 2 : n < 100 ? 1 : 0)
+  if (s.includes('.')) s = s.replace(/\.?0+$/, '')
+  return s.replace('.', ',')
 }
 
 /** Порог бюджета → статус светофора. <80% ok · 80–100% warn · >100% over */

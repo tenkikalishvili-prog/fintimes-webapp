@@ -52,6 +52,18 @@ export function More() {
         className="field"
         onClick={() => {
           haptic('light')
+          navigate('/goals')
+        }}
+        style={{ marginBottom: 12 }}
+      >
+        <span>🎯 Цели</span>
+        <span className="val">Копить ›</span>
+      </button>
+
+      <button
+        className="field"
+        onClick={() => {
+          haptic('light')
           navigate('/settings')
         }}
         style={{ marginBottom: 12 }}

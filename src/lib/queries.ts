@@ -12,6 +12,11 @@ import type {
   DebtPayment,
   DebtPaymentInput,
   DebtUpdateInput,
+  Goal,
+  GoalContribution,
+  GoalContributionInput,
+  GoalInput,
+  GoalUpdateInput,
   HistoryFilters,
   BudgetGroupView,
   BudgetLine,
@@ -49,6 +54,8 @@ export const keys = {
   history: (filters: HistoryFilters) => ['history', filters] as const,
   debts: (includeClosed: boolean) => ['debts', includeClosed] as const,
   debtPayments: (debtId: number) => ['debt-payments', debtId] as const,
+  goals: (includeDone: boolean) => ['goals', includeDone] as const,
+  goalContributions: (goalId: number) => ['goal-contributions', goalId] as const,
   bills: (month?: string) => ['bills', month ?? 'current'] as const,
   settings: ['settings'] as const,
 }
@@ -123,7 +130,8 @@ export function useHistory(filters: HistoryFilters, pageSize = 40) {
 }
 
 // ── Изменение ────────────────────────────────────────────────────────────
-/** После записи/удаления операции пересчитываются суммы во всех разделах. */
+/** После записи/удаления операции пересчитываются суммы во всех разделах.
+ *  Единый реестр: операция может быть по цели/долгу — обновляем и их (дёшево). */
 function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['overview'] })
   qc.invalidateQueries({ queryKey: ['analytics'] })
@@ -131,6 +139,8 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['budget-overview'] })
   qc.invalidateQueries({ queryKey: ['transactions'] })
   qc.invalidateQueries({ queryKey: ['history'] })
+  qc.invalidateQueries({ queryKey: ['goals'] })
+  qc.invalidateQueries({ queryKey: ['debts'] })
 }
 
 /** Умный ввод: «кофе 350» → сумма + подобранная подкатегория (ничего не пишет в БД). */
@@ -176,8 +186,9 @@ export function useDebts(includeClosed = false) {
 export function useCreateDebt() {
   const qc = useQueryClient()
   return useMutation({
+    // Создание долга заводит операцию-тело → влияет на остаток и историю.
     mutationFn: (body: DebtInput) => api.post<Debt>('/api/debts', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => invalidateMoney(qc),
   })
 }
 
@@ -186,7 +197,7 @@ export function useUpdateDebt() {
   return useMutation({
     mutationFn: ({ id, body }: { id: number; body: DebtUpdateInput }) =>
       api.patch<Debt>(`/api/debts/${id}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => invalidateMoney(qc),
   })
 }
 
@@ -194,7 +205,7 @@ export function useDeleteDebt() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => api.del<void>(`/api/debts/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => invalidateMoney(qc),
   })
 }
 
@@ -207,9 +218,9 @@ export function useDebtPayments(debtId: number) {
   })
 }
 
-/** После изменения платежей — обновляем и список долгов, и историю платежей долга. */
+/** После изменения платежей — обновляем деньги (остаток/история) и историю платежей долга. */
 function invalidateDebtPayments(qc: ReturnType<typeof useQueryClient>, debtId: number) {
-  qc.invalidateQueries({ queryKey: ['debts'] })
+  invalidateMoney(qc)
   qc.invalidateQueries({ queryKey: keys.debtPayments(debtId) })
 }
 
@@ -226,6 +237,71 @@ export function useDeleteDebtPayment(debtId: number) {
   return useMutation({
     mutationFn: (paymentId: number) => api.del<Debt>(`/api/debts/${debtId}/payments/${paymentId}`),
     onSuccess: () => invalidateDebtPayments(qc, debtId),
+  })
+}
+
+// ── Финансовые цели (направление D, S13) ───────────────────────────────────
+export function useGoals(includeDone = false) {
+  return useQuery({
+    queryKey: keys.goals(includeDone),
+    queryFn: () => api.get<Goal[]>(`/api/goals${qs({ includeDone: includeDone ? 'true' : undefined })}`),
+  })
+}
+
+export function useCreateGoal() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: GoalInput) => api.post<Goal>('/api/goals', body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+  })
+}
+
+export function useUpdateGoal() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: GoalUpdateInput }) =>
+      api.patch<Goal>(`/api/goals/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+  })
+}
+
+export function useDeleteGoal() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.del<void>(`/api/goals/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+  })
+}
+
+/** История пополнений конкретной цели (свежие сверху). */
+export function useGoalContributions(goalId: number) {
+  return useQuery({
+    queryKey: keys.goalContributions(goalId),
+    queryFn: () => api.get<GoalContribution[]>(`/api/goals/${goalId}/contributions`),
+  })
+}
+
+/** После изменения пополнений — обновляем деньги (остаток/история) и историю пополнений цели. */
+function invalidateGoalContributions(qc: ReturnType<typeof useQueryClient>, goalId: number) {
+  invalidateMoney(qc)
+  qc.invalidateQueries({ queryKey: keys.goalContributions(goalId) })
+}
+
+export function useAddGoalContribution(goalId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: GoalContributionInput) =>
+      api.post<Goal>(`/api/goals/${goalId}/contributions`, body),
+    onSuccess: () => invalidateGoalContributions(qc, goalId),
+  })
+}
+
+export function useDeleteGoalContribution(goalId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (contributionId: number) =>
+      api.del<Goal>(`/api/goals/${goalId}/contributions/${contributionId}`),
+    onSuccess: () => invalidateGoalContributions(qc, goalId),
   })
 }
 
