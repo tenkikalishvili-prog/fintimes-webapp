@@ -78,13 +78,24 @@ export interface Overview {
   topSpend: TopSpend[]
 }
 
+/** Подкатегория внутри группы (второй уровень donut, drill-down). */
+export interface AnalyticsSubSlice {
+  name: string
+  emoji: string | null
+  value: number
+}
+
 export interface AnalyticsSlice {
   name: string
+  emoji: string | null
   value: number
+  subcategories: AnalyticsSubSlice[]
 }
 
 export interface Analytics {
   month: string
+  /** Статья разбивки: expense | income. */
+  article: Article
   total: number
   slices: AnalyticsSlice[]
 }

@@ -45,7 +45,8 @@ const qs = (params: Record<string, string | number | undefined>): string => {
 export const keys = {
   me: ['me'] as const,
   overview: (month?: string) => ['overview', month ?? 'current'] as const,
-  analytics: (month?: string) => ['analytics', month ?? 'current'] as const,
+  analytics: (month?: string, article: Article = 'expense') =>
+    ['analytics', month ?? 'current', article] as const,
   budget: (month?: string, group?: string) => ['budget', month ?? 'current', group ?? 'Траты'] as const,
   budgetOverview: (month?: string, article: Article = 'expense') =>
     ['budget-overview', month ?? 'current', article] as const,
@@ -72,10 +73,10 @@ export function useOverview(month?: string) {
   })
 }
 
-export function useAnalytics(month?: string) {
+export function useAnalytics(month?: string, article: Article = 'expense') {
   return useQuery({
-    queryKey: keys.analytics(month),
-    queryFn: () => api.get<Analytics>(`/api/analytics${qs({ month })}`),
+    queryKey: keys.analytics(month, article),
+    queryFn: () => api.get<Analytics>(`/api/analytics${qs({ month, article })}`),
   })
 }
 
