@@ -8,10 +8,25 @@ import {
   monthTitle,
   shiftMonth,
 } from '../lib/format'
-import { useAnalytics, useBudgetOverview, useOverview } from '../lib/queries'
+import {
+  useAnalytics,
+  useBudgetOverview,
+  useCashflowPlan,
+  useOverview,
+  useUpdateBill,
+  useUpdateDebt,
+} from '../lib/queries'
 import { haptic } from '../lib/telegram'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
-import type { Article, AnalyticsSlice, BudgetGroupView, Overview } from '../types'
+import type {
+  Article,
+  AnalyticsSlice,
+  BudgetGroupView,
+  CashflowItem,
+  CashflowPlan,
+  CashflowSegment,
+  Overview,
+} from '../types'
 
 const PALETTE = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)']
 
@@ -35,6 +50,9 @@ export function Analytics() {
       <header className="apphead">
         <div className="mo">Аналитика</div>
       </header>
+
+      {/* ⓪ Платёжный календарь (S16) — всегда текущий месяц, независим от степпера */}
+      <CashflowPlanBlock />
 
       {/* ① Период */}
       <div className="hist-period">
@@ -84,6 +102,147 @@ export function Analytics() {
       {/* ④ План vs факт (расходы) */}
       {budget.data && <BudgetVsFact groups={budget.data} />}
     </>
+  )
+}
+
+// ── Платёжный календарь (S16) ─────────────────────────────────────────────
+function CashflowPlanBlock() {
+  const plan = useCashflowPlan()
+
+  if (plan.isPending) return <SkeletonBlock rows={3} />
+  if (plan.isError) {
+    return (
+      <div className="block">
+        <ErrorState onRetry={plan.refetch} />
+      </div>
+    )
+  }
+  return <CashflowPlanView plan={plan.data} />
+}
+
+function CashflowPlanView({ plan }: { plan: CashflowPlan }) {
+  const hasBoundary = plan.boundaryDay != null
+  const overdue = plan.overdue
+  // Совсем пусто (ни просрочки, ни обязательств) — не мозолим глаза большим блоком.
+  const totalItems =
+    overdue.items.length + plan.segments.reduce((n, s) => n + s.items.length, 0)
+
+  return (
+    <div className="block cf-block">
+      <h3 style={{ marginBottom: 4 }}>
+        Платёжный календарь <span>{monthTitle(plan.month)}</span>
+      </h3>
+      <p className="muted" style={{ fontSize: 11.5, margin: '0 0 12px' }}>
+        Сколько нужно заплатить до и после поступления дохода
+        {hasBoundary ? ` (граница — ${plan.boundaryDay} числа)` : ''}.
+      </p>
+
+      {overdue.items.length > 0 && (
+        <div className="cf-bucket cf-overdue">
+          <div className="cf-bhead">
+            <span className="cf-btitle">⚠️ Просрочено</span>
+            <span className="cf-bsum neg">{money(overdue.total)}</span>
+          </div>
+          {overdue.items.map((it) => (
+            <CashflowRow key={`od-${it.kind}-${it.id}`} item={it} />
+          ))}
+        </div>
+      )}
+
+      {!hasBoundary && (
+        <p className="muted cf-hint">
+          💡 Задайте даты и суммы доходов в разделе «Доходы» → «Бюджет», чтобы разбить месяц на
+          отрезки «до / после» поступления.
+        </p>
+      )}
+
+      {plan.segments.map((seg) => (
+        <SegmentBucket key={seg.index} seg={seg} hasBoundary={hasBoundary} />
+      ))}
+
+      {totalItems === 0 && (
+        <EmptyState
+          emoji="🗓️"
+          title="Нет обязательств на месяц"
+          sub="Платежи и долги со сроком в этом месяце появятся здесь"
+        />
+      )}
+    </div>
+  )
+}
+
+function SegmentBucket({ seg, hasBoundary }: { seg: CashflowSegment; hasBoundary: boolean }) {
+  const label = hasBoundary
+    ? `${seg.index === 1 ? 'До' : 'После'} ${seg.boundaryDay} числа`
+    : seg.label
+  const covered = seg.coverage >= 0
+  return (
+    <div className="cf-bucket">
+      <div className="cf-bhead">
+        <span className="cf-btitle">{seg.index === 1 ? '①' : '②'} {label}</span>
+        <span className="cf-bsum">{money(seg.obligations)}</span>
+      </div>
+      {seg.items.length === 0 ? (
+        <p className="muted cf-empty">Обязательств нет</p>
+      ) : (
+        seg.items.map((it) => (
+          <CashflowRow key={`${seg.index}-${it.kind}-${it.id}`} item={it} toSegment={seg.index === 1 ? 2 : 1} />
+        ))
+      )}
+      {hasBoundary && (
+        <div className="cf-cover">
+          <span className="cf-cover-inc">Ожидаемый доход: {money(seg.expectedIncome)}</span>
+          <span className={`cf-cover-rest ${covered ? 'pos' : 'neg'}`}>
+            {covered ? 'Остаётся ' : 'Не хватает '}
+            {covered ? '' : '−'}{money(Math.abs(seg.coverage))}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CashflowRow({ item, toSegment }: { item: CashflowItem; toSegment?: number }) {
+  const [armed, setArmed] = useState(false)
+  const updateBill = useUpdateBill()
+  const updateDebt = useUpdateDebt()
+  const pending = updateBill.isPending || updateDebt.isPending
+
+  const move = async () => {
+    if (toSegment == null) return
+    if (!armed) { setArmed(true); haptic('light'); return }
+    try {
+      if (item.kind === 'bill') {
+        await updateBill.mutateAsync({ id: item.id, body: { segmentOverride: toSegment } })
+      } else {
+        await updateDebt.mutateAsync({ id: item.id, body: { segmentOverride: toSegment } })
+      }
+      haptic('medium')
+    } catch {
+      setArmed(false)
+    }
+  }
+
+  return (
+    <div className="cf-row">
+      <span className="cf-emoji">{item.emoji ?? (item.kind === 'debt' ? '🤝' : '📄')}</span>
+      <span className="cf-name">
+        {item.title}
+        {item.overridden && <span className="cf-badge">перенесён</span>}
+        <span className="cf-day">до {item.day} числа</span>
+      </span>
+      <span className="cf-amt">{money(item.amount)}</span>
+      {toSegment != null && (
+        <button
+          className={`cf-move${armed ? ' armed' : ''}`}
+          disabled={pending}
+          onClick={move}
+          aria-label="Перенести в другой отрезок"
+        >
+          {armed ? 'Точно?' : toSegment === 1 ? '↑' : '↓'}
+        </button>
+      )}
+    </div>
   )
 }
 

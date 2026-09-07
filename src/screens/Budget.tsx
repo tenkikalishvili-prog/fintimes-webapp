@@ -209,6 +209,12 @@ function CategoryPanel({
                   <i className={fillClass[s]} style={{ width: `${p}%` }} />
                 </div>
               )}
+              {isIncome && sub.expectedDay != null && (
+                <div className="inc-plan">
+                  📅 до {sub.expectedDay} числа
+                  {sub.expectedAmount != null ? ` · план ${compact(sub.expectedAmount)}` : ''}
+                </div>
+              )}
             </button>
           )
         })}
@@ -224,6 +230,11 @@ function CategoryPanel({
 function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boolean; onClose: () => void }) {
   const [name, setName] = useState(sub.name)
   const [amount, setAmount] = useState(sub.limit > 0 ? String(Math.round(sub.limit)) : '')
+  // Плановый доход (S16) — только для income-подкатегорий.
+  const [expDay, setExpDay] = useState(sub.expectedDay != null ? String(sub.expectedDay) : '')
+  const [expAmount, setExpAmount] = useState(
+    sub.expectedAmount != null ? String(Math.round(sub.expectedAmount)) : '',
+  )
   const [err, setErr] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState(false)
   const rename = useRenameSubcategory()
@@ -236,11 +247,33 @@ function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boole
     const amt = Number(amount || 0)
     if (!nm) { setErr('Название не может быть пустым'); return }
     if (!isIncome && (!Number.isFinite(amt) || amt < 0)) { setErr('Лимит должен быть числом ≥ 0'); return }
+    // Плановый доход: пусто → null (очистить); иначе день 1–31, сумма ≥ 0.
+    const day = expDay === '' ? null : Number(expDay)
+    const planned = expAmount === '' ? null : Number(expAmount)
+    if (isIncome && day !== null && (!Number.isInteger(day) || day < 1 || day > 31)) {
+      setErr('День поступления — число от 1 до 31'); return
+    }
+    if (isIncome && planned !== null && (!Number.isFinite(planned) || planned < 0)) {
+      setErr('Плановая сумма — число ≥ 0'); return
+    }
     setErr(null)
     try {
-      if (nm !== sub.name) await rename.mutateAsync({ id: sub.subcategoryId, name: nm })
-      if (!isIncome && amt !== Math.round(sub.limit)) {
-        await setBudget.mutateAsync({ categoryId: sub.subcategoryId, amount: amt })
+      if (isIncome) {
+        const dayChanged = day !== (sub.expectedDay ?? null)
+        const plannedChanged = planned !== (sub.expectedAmount != null ? Math.round(sub.expectedAmount) : null)
+        if (nm !== sub.name || dayChanged || plannedChanged) {
+          await rename.mutateAsync({
+            id: sub.subcategoryId,
+            name: nm,
+            ...(dayChanged ? { expectedDay: day } : {}),
+            ...(plannedChanged ? { expectedAmount: planned } : {}),
+          })
+        }
+      } else {
+        if (nm !== sub.name) await rename.mutateAsync({ id: sub.subcategoryId, name: nm })
+        if (amt !== Math.round(sub.limit)) {
+          await setBudget.mutateAsync({ categoryId: sub.subcategoryId, amount: amt })
+        }
       }
       haptic('medium')
       onClose()
@@ -285,6 +318,37 @@ function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boole
               onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
               style={{ marginBottom: 14 }}
             />
+          </>
+        )}
+
+        {isIncome && (
+          <>
+            <p className="muted" style={{ fontSize: 12, margin: '0 0 12px' }}>
+              Плановый доход — для «Платёжного календаря» на Аналитике: он делит месяц на отрезки
+              «до / после» поступления и показывает, хватает ли денег на платежи.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+              <div style={{ flex: '0 0 40%' }}>
+                <label className="sheet-label">День поступления</label>
+                <input
+                  className="input"
+                  inputMode="numeric"
+                  placeholder="1–31"
+                  value={expDay}
+                  onChange={(e) => setExpDay(e.target.value.replace(/[^\d]/g, '').slice(0, 2))}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="sheet-label">Плановая сумма, ₽</label>
+                <input
+                  className="input"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={expAmount}
+                  onChange={(e) => setExpAmount(e.target.value.replace(/[^\d]/g, ''))}
+                />
+              </div>
+            </div>
           </>
         )}
 

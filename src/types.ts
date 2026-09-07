@@ -116,6 +116,10 @@ export interface BudgetSub {
   emoji: string | null
   spent: number
   limit: number
+  /** Платёжный календарь (S16): день поступления дохода (1–31). Только для income. */
+  expectedDay?: number | null
+  /** Плановая сумма дохода, ₽. Только для income. */
+  expectedAmount?: number | null
 }
 
 /** Категория (группа) с её подкатегориями — «страница» карусели в разделе «Бюджет». */
@@ -230,6 +234,8 @@ export interface Debt {
   note: string | null
   /** Долг закрыт (возвращён). */
   isClosed: boolean
+  /** Платёжный календарь (S16): ручной перенос между отрезками (1 | 2 | null). */
+  segmentOverride?: number | null
 }
 
 /** Данные создания долга. */
@@ -266,6 +272,8 @@ export interface DebtUpdateInput {
   startedOn?: string
   note?: string
   isClosed?: boolean
+  /** Перенос между отрезками платёжного календаря (S16): 1 | 2 | null. */
+  segmentOverride?: number | null
 }
 
 /** Обязательный платёж (направление C, S10): регулярное ежемесячное обязательство. */
@@ -285,6 +293,8 @@ export interface Bill {
   isActive: boolean
   /** Оплачен ли за выбранный месяц. */
   paid: boolean
+  /** Платёжный календарь (S16): ручной перенос между отрезками (1 | 2 | null). */
+  segmentOverride?: number | null
 }
 
 /** Данные создания платежа. */
@@ -304,6 +314,8 @@ export interface BillUpdateInput {
   categoryId?: number
   note?: string
   isActive?: boolean
+  /** Перенос между отрезками платёжного календаря (S16): 1 | 2 | null. */
+  segmentOverride?: number | null
 }
 
 /** Финансовая цель / накопление (направление D, S13). Отдельная сущность, не операция. */
@@ -375,4 +387,58 @@ export interface SmartParseResult {
   /** Имя подобранной подкатегории. */
   subcategoryName: string | null
   emoji: string | null
+}
+
+// ── Платёжный календарь (направление D, S16) ─────────────────────────────
+
+/** Одно обязательство к оплате (платёж или долг) внутри корзины/отрезка. */
+export interface CashflowItem {
+  kind: 'bill' | 'debt'
+  id: number
+  title: string
+  emoji: string | null
+  /** Число месяца-срок (1–31, склампленное). */
+  day: number
+  amount: number
+  categoryName: string | null
+  counterparty: string | null
+  /** Перенесён вручную в этот отрезок. */
+  overridden: boolean
+}
+
+/** Плановый доход (income-подкатегория с датой и суммой). */
+export interface CashflowIncome {
+  name: string
+  group: string
+  emoji: string | null
+  day: number
+  amount: number
+}
+
+/** Отрезок месяца (до G / после G) с покрытием доходом. */
+export interface CashflowSegment {
+  /** 1 (до границы) | 2 (после). */
+  index: number
+  label: string
+  boundaryDay: number | null
+  /** Ожидаемый доход отрезка, ₽. */
+  expectedIncome: number
+  /** Сумма обязательств отрезка, ₽. */
+  obligations: number
+  /** Остаток = доход − обязательства (может быть < 0). */
+  coverage: number
+  items: CashflowItem[]
+}
+
+/** Ответ GET /api/cashflow-plan — расчёт за текущий месяц. */
+export interface CashflowPlan {
+  month: string // YYYY-MM
+  today: string // ISO YYYY-MM-DD
+  /** День границы = день крупнейшего планового дохода. null — доходов с датой нет. */
+  boundaryDay: number | null
+  incomes: CashflowIncome[]
+  /** Корзина «Просрочено». */
+  overdue: { total: number; items: CashflowItem[] }
+  /** Отрезки: 2 при заданной границе, иначе 1 («Весь месяц»). */
+  segments: CashflowSegment[]
 }

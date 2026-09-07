@@ -20,6 +20,7 @@ import type {
   HistoryFilters,
   BudgetGroupView,
   BudgetLine,
+  CashflowPlan,
   CategoryGroup,
   DeleteResult,
   Me,
@@ -58,6 +59,7 @@ export const keys = {
   goals: (includeDone: boolean) => ['goals', includeDone] as const,
   goalContributions: (goalId: number) => ['goal-contributions', goalId] as const,
   bills: (month?: string) => ['bills', month ?? 'current'] as const,
+  cashflow: ['cashflow-plan'] as const,
   settings: ['settings'] as const,
 }
 
@@ -142,6 +144,7 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['history'] })
   qc.invalidateQueries({ queryKey: ['goals'] })
   qc.invalidateQueries({ queryKey: ['debts'] })
+  qc.invalidateQueries({ queryKey: ['cashflow-plan'] })
 }
 
 /** Умный ввод: «кофе 350» → сумма + подобранная подкатегория (ничего не пишет в БД). */
@@ -315,11 +318,26 @@ export function useBills(month?: string) {
   })
 }
 
+/** Инвалидация после правок платежа: список платежей + платёжный календарь (S16). */
+function invalidateBills(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['bills'] })
+  qc.invalidateQueries({ queryKey: ['cashflow-plan'] })
+}
+
+// ── Платёжный календарь (направление D, S16) ───────────────────────────────
+/** «Платёжный календарь» за текущий месяц. Не зависит от степпера «Аналитики». */
+export function useCashflowPlan() {
+  return useQuery({
+    queryKey: keys.cashflow,
+    queryFn: () => api.get<CashflowPlan>('/api/cashflow-plan'),
+  })
+}
+
 export function useCreateBill() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: BillInput) => api.post<Bill>('/api/bills', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bills'] }),
+    onSuccess: () => invalidateBills(qc),
   })
 }
 
@@ -328,7 +346,7 @@ export function useUpdateBill() {
   return useMutation({
     mutationFn: ({ id, body }: { id: number; body: BillUpdateInput }) =>
       api.patch<Bill>(`/api/bills/${id}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bills'] }),
+    onSuccess: () => invalidateBills(qc),
   })
 }
 
@@ -336,7 +354,7 @@ export function useDeleteBill() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => api.del<void>(`/api/bills/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bills'] }),
+    onSuccess: () => invalidateBills(qc),
   })
 }
 
@@ -392,12 +410,30 @@ export function useSetBudget() {
   })
 }
 
-/** Переименование подкатегории. Меняет название везде (id не трогается). */
+/**
+ * Переименование подкатегории. Меняет название везде (id не трогается).
+ * Для income-подкатегорий можно передать плановый доход (S16): expectedDay/expectedAmount
+ * (в т.ч. null — очистить). Отсутствие полей их не трогает.
+ */
 export function useRenameSubcategory() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, name }: { id: number; name: string }) =>
-      api.patch<Subcategory>(`/api/categories/${id}`, { name }),
+    mutationFn: ({
+      id,
+      name,
+      expectedDay,
+      expectedAmount,
+    }: {
+      id: number
+      name: string
+      expectedDay?: number | null
+      expectedAmount?: number | null
+    }) => {
+      const body: Record<string, unknown> = { name }
+      if (expectedDay !== undefined) body.expectedDay = expectedDay
+      if (expectedAmount !== undefined) body.expectedAmount = expectedAmount
+      return api.patch<Subcategory>(`/api/categories/${id}`, body)
+    },
     onSuccess: () => {
       invalidateMoney(qc)
       qc.invalidateQueries({ queryKey: ['categories'] })

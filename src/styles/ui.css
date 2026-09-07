@@ -293,6 +293,37 @@ a{color:inherit;text-decoration:none}
 .pf-row .catrow .am b{color:var(--text)}
 .pf-row .catrow .am.over b{color:var(--over)}
 
+/* ---------- Платёжный календарь (S16) ---------- */
+.cf-bucket{border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-bottom:10px;
+  background:var(--bg2)}
+.cf-bucket:last-child{margin-bottom:0}
+.cf-overdue{border-color:rgba(255,92,124,.45);background:var(--over-dim)}
+.cf-bhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.cf-btitle{font-size:12.5px;font-weight:800;color:var(--text)}
+.cf-bsum{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap}
+.cf-bsum.neg{color:var(--over)}
+.cf-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--line)}
+.cf-row:first-of-type{border-top:none}
+.cf-emoji{flex-shrink:0;font-size:15px}
+.cf-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--text);
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.cf-day{font-size:10.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.cf-badge{font-size:9.5px;font-weight:700;color:var(--accent-soft);background:var(--accent-dim);
+  border-radius:999px;padding:1px 7px;white-space:nowrap}
+.cf-amt{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap}
+.cf-move{flex-shrink:0;width:30px;height:30px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--accent-soft);font-size:14px;font-weight:800;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;padding:0}
+.cf-move.armed{width:auto;padding:0 10px;font-size:11px;background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.cf-move:disabled{opacity:.5}
+.cf-cover{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;
+  padding-top:8px;border-top:1px dashed var(--line);font-size:11px;font-weight:700}
+.cf-cover-inc{color:var(--muted)}
+.cf-cover-rest.pos{color:var(--ok)} .cf-cover-rest.neg{color:var(--over)}
+.cf-empty,.cf-hint{font-size:11.5px;margin:0}
+.cf-hint{margin-bottom:10px;line-height:1.5}
+.cf-empty{padding:3px 0}
+
 /* ---------- Нижняя навигация + плавающая центральная «＋» ---------- */
 .tabbar{position:fixed;left:0;right:0;bottom:0;height:var(--tabbar-h);z-index:40;
   max-width:520px;margin:0 auto;
@@ -330,6 +361,9 @@ a{color:inherit;text-decoration:none}
 /* ---------- Строка бюджета (кнопка) ---------- */
 .budget-row{display:block;width:100%;background:none;border:none;padding:0;cursor:pointer;text-align:left;color:var(--text)}
 .budget-row + .budget-row{margin-top:4px}
+/* Бейдж планового дохода (S16) под строкой income-подкатегории */
+.inc-plan{margin:3px 0 0 27px;font-size:10.5px;font-weight:700;color:var(--accent-soft);
+  background:var(--accent-dim);border-radius:999px;padding:2px 9px;display:inline-block}
 
 /* ---------- Бюджет: карусель категорий ---------- */
 .bcar{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -2px}
