@@ -77,17 +77,17 @@ export function Home() {
 
           {/* Быстрые действия */}
           <div className="qa">
-            <button className="qi" onClick={() => { haptic('light'); navigate('/add') }}>
-              <span className="qic">＋</span>Добавить
+            <button className="qi" onClick={() => { haptic('light'); navigate('/debts') }}>
+              <span className="qic">🤝</span>Долги
             </button>
-            <button className="qi" onClick={() => { haptic('light'); navigate('/analytics') }}>
-              <span className="qic">◔</span>Аналитика
+            <button className="qi" onClick={() => { haptic('light'); navigate('/payments') }}>
+              <span className="qic">📅</span>Платежи
             </button>
-            <button className="qi" onClick={() => { haptic('light'); navigate('/budget') }}>
-              <span className="qic">▤</span>Бюджет
+            <button className="qi" onClick={() => { haptic('light'); navigate('/goals') }}>
+              <span className="qic">🎯</span>Цели
             </button>
-            <button className="qi" onClick={() => { haptic('light'); navigate('/more') }}>
-              <span className="qic">☰</span>Ещё
+            <button className="qi" onClick={() => { haptic('light'); navigate('/settings') }}>
+              <span className="qic">🔔</span>Уведомления
             </button>
           </div>
 
