@@ -50,10 +50,7 @@ export function Analytics() {
         <div className="mo">Аналитика</div>
       </header>
 
-      {/* ⓪ Платёжный календарь (S16) — всегда текущий месяц, независим от степпера */}
-      <CashflowPlanBlock />
-
-      {/* ① Период */}
+      {/* ① Единый степпер месяца — управляет всем экраном (календарь + сводка + структура) */}
       <div className="hist-period">
         <button className="hp-nav" onClick={() => { haptic('light'); setMonth(shiftMonth(month, -1)) }} aria-label="Раньше">
           ‹
@@ -68,6 +65,9 @@ export function Analytics() {
           ›
         </button>
       </div>
+
+      {/* ⓪ Платёжный календарь — за выбранный месяц */}
+      <CashflowPlanBlock month={month} />
 
       {/* ② Сводка месяца */}
       {overview.data ? <SummaryRow o={overview.data} /> : <SkeletonBlock rows={1} />}
@@ -105,32 +105,11 @@ export function Analytics() {
 }
 
 // ── Платёжный календарь V2 (S16.1): две плитки-половины месяца ─────────────
-function CashflowPlanBlock() {
-  const [month, setMonth] = useState(currentMonth())
+function CashflowPlanBlock({ month }: { month: string }) {
   const plan = useCashflowPlan(month)
-  const cur = currentMonth()
 
   return (
     <div className="cfv-wrap">
-      <div className="cfv-mstep">
-        <button
-          className="cfv-mnav"
-          onClick={() => { haptic('light'); setMonth(shiftMonth(month, -1)) }}
-          aria-label="Раньше"
-        >
-          ‹
-        </button>
-        <span className="cfv-mlab">{monthTitle(month)}</span>
-        <button
-          className="cfv-mnav"
-          disabled={month >= cur}
-          onClick={() => { haptic('light'); setMonth(shiftMonth(month, 1)) }}
-          aria-label="Позже"
-        >
-          ›
-        </button>
-      </div>
-
       {plan.isPending ? (
         <SkeletonBlock rows={2} />
       ) : plan.isError ? (
@@ -143,8 +122,8 @@ function CashflowPlanBlock() {
 }
 
 function CashflowTile({ seg }: { seg: CashflowSegment }) {
-  // Первая половина раскрыта по умолчанию, вторая — свёрнута.
-  const [open, setOpen] = useState(seg.index === 1)
+  // Обе плитки свёрнуты по умолчанию — раскрываются по тапу.
+  const [open, setOpen] = useState(false)
   const overdueCount = seg.items.filter((it) => it.overdue).length
   const restPos = seg.coverage >= 0
   const emptyBoth = seg.incomes.length === 0 && seg.items.length === 0
