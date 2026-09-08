@@ -209,10 +209,17 @@ function CategoryPanel({
                   <i className={fillClass[s]} style={{ width: `${p}%` }} />
                 </div>
               )}
-              {isIncome && sub.expectedDay != null && (
+              {isIncome && ((sub.incomeSchedule?.length ?? 0) > 0 || sub.expectedDay != null) && (
                 <div className="inc-plan">
-                  📅 до {sub.expectedDay} числа
-                  {sub.expectedAmount != null ? ` · план ${compact(sub.expectedAmount)}` : ''}
+                  📅 {sub.incomeSchedule && sub.incomeSchedule.length > 0
+                    ? sub.incomeSchedule.map((s) => `${s.day}-го`).join(', ')
+                    : `${sub.expectedDay}-го`}
+                  {' · план '}
+                  {compact(
+                    sub.incomeSchedule && sub.incomeSchedule.length > 0
+                      ? sub.incomeSchedule.reduce((n, s) => n + s.amount, 0)
+                      : sub.expectedAmount ?? 0,
+                  )}
                 </div>
               )}
             </button>
@@ -230,11 +237,20 @@ function CategoryPanel({
 function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boolean; onClose: () => void }) {
   const [name, setName] = useState(sub.name)
   const [amount, setAmount] = useState(sub.limit > 0 ? String(Math.round(sub.limit)) : '')
-  // Плановый доход (S16) — только для income-подкатегорий.
-  const [expDay, setExpDay] = useState(sub.expectedDay != null ? String(sub.expectedDay) : '')
-  const [expAmount, setExpAmount] = useState(
-    sub.expectedAmount != null ? String(Math.round(sub.expectedAmount)) : '',
-  )
+  // Плановый доход (S16 → V2) — только для income: несколько выплат в месяц.
+  const [slots, setSlots] = useState<{ day: string; amount: string }[]>(() => {
+    if (sub.incomeSchedule && sub.incomeSchedule.length > 0) {
+      return sub.incomeSchedule.map((s) => ({ day: String(s.day), amount: String(Math.round(s.amount)) }))
+    }
+    if (sub.expectedDay != null) {
+      return [{ day: String(sub.expectedDay), amount: sub.expectedAmount != null ? String(Math.round(sub.expectedAmount)) : '' }]
+    }
+    return [{ day: '', amount: '' }]
+  })
+  const setSlot = (i: number, patch: Partial<{ day: string; amount: string }>) =>
+    setSlots((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
+  const addSlot = () => setSlots((prev) => [...prev, { day: '', amount: '' }])
+  const delSlot = (i: number) => setSlots((prev) => prev.filter((_, idx) => idx !== i))
   const [err, setErr] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState(false)
   const rename = useRenameSubcategory()
@@ -247,28 +263,22 @@ function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boole
     const amt = Number(amount || 0)
     if (!nm) { setErr('Название не может быть пустым'); return }
     if (!isIncome && (!Number.isFinite(amt) || amt < 0)) { setErr('Лимит должен быть числом ≥ 0'); return }
-    // Плановый доход: пусто → null (очистить); иначе день 1–31, сумма ≥ 0.
-    const day = expDay === '' ? null : Number(expDay)
-    const planned = expAmount === '' ? null : Number(expAmount)
-    if (isIncome && day !== null && (!Number.isInteger(day) || day < 1 || day > 31)) {
-      setErr('День поступления — число от 1 до 31'); return
-    }
-    if (isIncome && planned !== null && (!Number.isFinite(planned) || planned < 0)) {
-      setErr('Плановая сумма — число ≥ 0'); return
+    // Плановый доход: собираем расписание из заполненных строк (день 1–31, сумма ≥ 0).
+    const schedule: { day: number; amount: number }[] = []
+    if (isIncome) {
+      for (const s of slots) {
+        if (s.day === '' && s.amount === '') continue
+        const day = Number(s.day)
+        const plan = Number(s.amount || 0)
+        if (!Number.isInteger(day) || day < 1 || day > 31) { setErr('День выплаты — число от 1 до 31'); return }
+        if (!Number.isFinite(plan) || plan < 0) { setErr('Сумма выплаты — число ≥ 0'); return }
+        schedule.push({ day, amount: plan })
+      }
     }
     setErr(null)
     try {
       if (isIncome) {
-        const dayChanged = day !== (sub.expectedDay ?? null)
-        const plannedChanged = planned !== (sub.expectedAmount != null ? Math.round(sub.expectedAmount) : null)
-        if (nm !== sub.name || dayChanged || plannedChanged) {
-          await rename.mutateAsync({
-            id: sub.subcategoryId,
-            name: nm,
-            ...(dayChanged ? { expectedDay: day } : {}),
-            ...(plannedChanged ? { expectedAmount: planned } : {}),
-          })
-        }
+        await rename.mutateAsync({ id: sub.subcategoryId, name: nm, incomeSchedule: schedule })
       } else {
         if (nm !== sub.name) await rename.mutateAsync({ id: sub.subcategoryId, name: nm })
         if (amt !== Math.round(sub.limit)) {
@@ -324,30 +334,44 @@ function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boole
         {isIncome && (
           <>
             <p className="muted" style={{ fontSize: 12, margin: '0 0 12px' }}>
-              Плановый доход — для «Платёжного календаря» на Аналитике: он делит месяц на отрезки
-              «до / после» поступления и показывает, хватает ли денег на платежи.
+              Плановый доход — для «Платёжного календаря». Укажите все даты выплат в месяце
+              (ЗП двумя частями — две строки). Каждая попадёт в свою половину месяца по дате.
             </p>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-              <div style={{ flex: '0 0 40%' }}>
-                <label className="sheet-label">День поступления</label>
-                <input
-                  className="input"
-                  inputMode="numeric"
-                  placeholder="1–31"
-                  value={expDay}
-                  onChange={(e) => setExpDay(e.target.value.replace(/[^\d]/g, '').slice(0, 2))}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label className="sheet-label">Плановая сумма, ₽</label>
-                <input
-                  className="input"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={expAmount}
-                  onChange={(e) => setExpAmount(e.target.value.replace(/[^\d]/g, ''))}
-                />
-              </div>
+            <label className="sheet-label">Даты выплат</label>
+            <div className="cfe-list">
+              {slots.map((s, i) => {
+                const day = Number(s.day)
+                const half = s.day === '' ? '' : day <= 15 ? 'до 15-го → 1-я половина' : 'после 15-го → 2-я половина'
+                return (
+                  <div className="cfe-row" key={i}>
+                    <div className="cfe-day">
+                      <input
+                        inputMode="numeric"
+                        placeholder="1–31"
+                        value={s.day}
+                        onChange={(e) => setSlot(i, { day: e.target.value.replace(/[^\d]/g, '').slice(0, 2) })}
+                      />
+                      <span>числа</span>
+                    </div>
+                    <div className="cfe-amt">
+                      <input
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={s.amount}
+                        onChange={(e) => setSlot(i, { amount: e.target.value.replace(/[^\d]/g, '') })}
+                      />
+                      <span>₽</span>
+                    </div>
+                    <button className="cfe-del" onClick={() => delSlot(i)} aria-label="Удалить дату">✕</button>
+                    {half && <span className={`cfe-half ${day <= 15 ? 'h1' : 'h2'}`}>{half}</span>}
+                  </div>
+                )
+              })}
+            </div>
+            <button className="cfe-add" onClick={addSlot}>＋ Добавить дату выплаты</button>
+            <div className="cfe-tally">
+              <span>Сумма выплат за месяц</span>
+              <b>{money(slots.reduce((n, s) => n + Number(s.amount || 0), 0))}</b>
             </div>
           </>
         )}

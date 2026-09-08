@@ -109,6 +109,12 @@ export interface BudgetLine {
   limit: number
 }
 
+/** Одна выплата планового дохода: день месяца (1–31) и сумма ₽ (V2, S16.1). */
+export interface IncomeSlot {
+  day: number
+  amount: number
+}
+
 /** Подкатегория в обзоре бюджета (без group — она задаётся родительской группой). */
 export interface BudgetSub {
   subcategoryId: number
@@ -116,10 +122,12 @@ export interface BudgetSub {
   emoji: string | null
   spent: number
   limit: number
-  /** Платёжный календарь (S16): день поступления дохода (1–31). Только для income. */
+  /** Платёжный календарь (S16): день поступления дохода (1–31). Только для income (легаси). */
   expectedDay?: number | null
-  /** Плановая сумма дохода, ₽. Только для income. */
+  /** Плановая сумма дохода, ₽. Только для income (легаси). */
   expectedAmount?: number | null
+  /** V2: несколько выплат в месяц. Только для income. Пусто/undefined — не задано. */
+  incomeSchedule?: IncomeSlot[] | null
 }
 
 /** Категория (группа) с её подкатегориями — «страница» карусели в разделе «Бюджет». */
@@ -391,7 +399,7 @@ export interface SmartParseResult {
 
 // ── Платёжный календарь (направление D, S16) ─────────────────────────────
 
-/** Одно обязательство к оплате (платёж или долг) внутри корзины/отрезка. */
+/** Одно обязательство к оплате (платёж или долг) внутри половины месяца. */
 export interface CashflowItem {
   kind: 'bill' | 'debt'
   id: number
@@ -402,8 +410,12 @@ export interface CashflowItem {
   amount: number
   categoryName: string | null
   counterparty: string | null
-  /** Перенесён вручную в этот отрезок. */
+  /** Перенесён вручную в эту половину. */
   overridden: boolean
+  /** Просрочен и перенесён вперёд. */
+  overdue: boolean
+  /** Исходная дата просрочки, напр. «с 28 авг». */
+  originLabel: string | null
 }
 
 /** Плановый доход (income-подкатегория с датой и суммой). */
@@ -415,30 +427,27 @@ export interface CashflowIncome {
   amount: number
 }
 
-/** Отрезок месяца (до G / после G) с покрытием доходом. */
+/** Половина месяца (① до 15 / ② после 15): три цифры + детализация. */
 export interface CashflowSegment {
-  /** 1 (до границы) | 2 (после). */
+  /** 1 (до 15) | 2 (после 15). */
   index: number
   label: string
-  boundaryDay: number | null
-  /** Ожидаемый доход отрезка, ₽. */
+  /** «Придёт» — доход половины, ₽. */
   expectedIncome: number
-  /** Сумма обязательств отрезка, ₽. */
+  /** «К оплате» — сумма обязательств половины, ₽. */
   obligations: number
-  /** Остаток = доход − обязательства (может быть < 0). */
+  /** «Останется» = доход − обязательства (может быть < 0). */
   coverage: number
+  incomes: CashflowIncome[]
   items: CashflowItem[]
 }
 
-/** Ответ GET /api/cashflow-plan — расчёт за текущий месяц. */
+/** Ответ GET /api/cashflow-plan — две плитки за выбранный месяц. */
 export interface CashflowPlan {
   month: string // YYYY-MM
   today: string // ISO YYYY-MM-DD
-  /** День границы = день крупнейшего планового дохода. null — доходов с датой нет. */
-  boundaryDay: number | null
-  incomes: CashflowIncome[]
-  /** Корзина «Просрочено». */
-  overdue: { total: number; items: CashflowItem[] }
-  /** Отрезки: 2 при заданной границе, иначе 1 («Весь месяц»). */
+  /** Граница половин — всегда 15. */
+  boundaryDay: number
+  /** Всегда две плитки: [① до 15, ② после 15]. */
   segments: CashflowSegment[]
 }

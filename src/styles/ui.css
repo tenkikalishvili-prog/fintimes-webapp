@@ -324,6 +324,89 @@ a{color:inherit;text-decoration:none}
 .cf-hint{margin-bottom:10px;line-height:1.5}
 .cf-empty{padding:3px 0}
 
+/* ---------- Платёжный календарь V2 (S16.1): две плитки-половины ---------- */
+.cfv-wrap{margin-bottom:14px}
+.cfv-mstep{display:flex;align-items:center;justify-content:space-between;
+  background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 6px;margin-bottom:10px}
+.cfv-mnav{width:30px;height:30px;border-radius:50%;border:none;background:var(--card2);color:var(--text);
+  font-size:16px;font-weight:800;cursor:pointer;line-height:1}
+.cfv-mnav:disabled{opacity:.4}
+.cfv-mlab{font-size:13.5px;font-weight:800;letter-spacing:-.01em;text-transform:capitalize}
+
+.cfv-tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  overflow:hidden;margin-bottom:10px}
+.cfv-top{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+  color:var(--text);padding:13px 14px 3px;font-family:inherit}
+.cfv-h{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.cfv-ic{width:34px;height:34px;border-radius:11px;background:var(--accent-dim);
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.cfv-tt{flex:1;min-width:0}
+.cfv-tt b{display:block;font-size:14px;font-weight:800;letter-spacing:-.01em}
+.cfv-tt small{font-size:10.5px;color:var(--faint);font-weight:600}
+.cfv-chev{width:26px;height:26px;border-radius:9px;background:var(--card2);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:var(--muted);transition:transform .25s}
+.cfv-tile.open .cfv-chev{transform:rotate(180deg)}
+.cfv-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.cfv-kpi{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 10px}
+.cfv-k{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:5px}
+.cfv-v{font-size:16px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cfv-v.inc{color:var(--ok)}
+.cfv-kpi.rest.pos{border-color:rgba(70,213,133,.35);background:linear-gradient(180deg,var(--ok-dim),transparent)}
+.cfv-kpi.rest.neg{border-color:rgba(255,92,124,.35);background:linear-gradient(180deg,var(--over-dim),transparent)}
+.cfv-kpi.rest.pos .cfv-v{color:var(--ok)} .cfv-kpi.rest.neg .cfv-v{color:var(--over)}
+
+.cfv-status{display:flex;align-items:center;gap:6px;padding:10px 14px 13px}
+.cfv-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;
+  font-size:11px;font-weight:700}
+.cfv-pill.ok{background:var(--ok-dim);color:var(--ok)}
+.cfv-pill.over{background:var(--over-dim);color:var(--over)}
+
+.cfv-body{border-top:1px solid var(--line);padding:6px 12px 12px}
+.cfv-sec{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--faint);margin:9px 4px 3px}
+.cfv-rows{display:flex;flex-direction:column;gap:1px}
+.cfv-row{display:flex;align-items:center;gap:9px;padding:8px 6px;border-radius:11px}
+.cfv-em{width:28px;height:28px;border-radius:9px;background:var(--card2);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.cfv-nm{flex:1;min-width:0}
+.cfv-nm b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cfv-nm small{font-size:10.5px;color:var(--faint);font-weight:600}
+.cfv-amt{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0}
+.cfv-row.inc .cfv-amt{color:var(--ok)}
+.cfv-badge{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;color:var(--accent-soft);
+  background:var(--accent-dim);padding:1px 6px;border-radius:999px;vertical-align:middle}
+.cfv-badge.od{color:var(--over);background:var(--over-dim)}
+.cfv-mv{flex-shrink:0;min-width:30px;height:30px;padding:0 8px;border-radius:9px;border:1px solid var(--line);
+  background:none;color:var(--muted);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
+.cfv-mv.armed{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-size:11px}
+.cfv-mv:disabled{opacity:.5}
+.cfv-empty{font-size:11.5px;color:var(--muted);margin:2px 4px;padding:2px 0}
+
+/* ---------- Редактор дат планового дохода (Budget) ---------- */
+.cfe-list{display:flex;flex-direction:column;gap:8px;margin-bottom:9px}
+.cfe-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-md);padding:8px}
+.cfe-day{display:flex;align-items:center;gap:6px;background:var(--card2);border-radius:12px;padding:8px 10px}
+.cfe-day input{width:34px;background:none;border:none;color:var(--text);font-family:inherit;
+  font-size:15px;font-weight:800;text-align:center;outline:none;font-variant-numeric:tabular-nums}
+.cfe-day span{font-size:10px;color:var(--faint);font-weight:700}
+.cfe-amt{position:relative}
+.cfe-amt input{width:100%;background:var(--card2);border:1px solid transparent;color:var(--text);
+  font-family:inherit;font-size:14px;font-weight:700;padding:10px 30px 10px 12px;border-radius:12px;
+  outline:none;font-variant-numeric:tabular-nums}
+.cfe-amt input:focus{border-color:var(--accent)}
+.cfe-amt span{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;
+  color:var(--faint);font-weight:700;pointer-events:none}
+.cfe-del{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:none;
+  color:var(--faint);font-size:14px;cursor:pointer}
+.cfe-half{grid-column:1 / -1;font-size:9.5px;font-weight:700;margin:-2px 2px 0}
+.cfe-half.h1{color:var(--accent-soft)} .cfe-half.h2{color:var(--yellow)}
+.cfe-add{width:100%;background:none;border:1px dashed var(--line);color:var(--accent-soft);
+  font-family:inherit;font-size:12.5px;font-weight:700;padding:11px;border-radius:var(--r-md);cursor:pointer;margin-bottom:4px}
+.cfe-tally{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 14px;
+  font-size:12px;color:var(--muted);font-weight:600}
+.cfe-tally b{color:var(--text);font-weight:800;font-variant-numeric:tabular-nums}
+
 /* ---------- Нижняя навигация + плавающая центральная «＋» ---------- */
 .tabbar{position:fixed;left:0;right:0;bottom:0;height:var(--tabbar-h);z-index:40;
   max-width:520px;margin:0 auto;

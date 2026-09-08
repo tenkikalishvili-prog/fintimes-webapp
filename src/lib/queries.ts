@@ -23,6 +23,7 @@ import type {
   CashflowPlan,
   CategoryGroup,
   DeleteResult,
+  IncomeSlot,
   Me,
   NotificationSettings,
   NotificationSettingsInput,
@@ -324,12 +325,12 @@ function invalidateBills(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['cashflow-plan'] })
 }
 
-// ── Платёжный календарь (направление D, S16) ───────────────────────────────
-/** «Платёжный календарь» за текущий месяц. Не зависит от степпера «Аналитики». */
-export function useCashflowPlan() {
+// ── Платёжный календарь (направление D, S16 → V2) ─────────────────────────
+/** «Платёжный календарь» V2: две плитки-половины за выбранный месяц (свой степпер). */
+export function useCashflowPlan(month: string) {
   return useQuery({
-    queryKey: keys.cashflow,
-    queryFn: () => api.get<CashflowPlan>('/api/cashflow-plan'),
+    queryKey: [...keys.cashflow, month],
+    queryFn: () => api.get<CashflowPlan>(`/api/cashflow-plan?month=${month}`),
   })
 }
 
@@ -423,15 +424,18 @@ export function useRenameSubcategory() {
       name,
       expectedDay,
       expectedAmount,
+      incomeSchedule,
     }: {
       id: number
       name: string
       expectedDay?: number | null
       expectedAmount?: number | null
+      incomeSchedule?: IncomeSlot[] | null
     }) => {
       const body: Record<string, unknown> = { name }
       if (expectedDay !== undefined) body.expectedDay = expectedDay
       if (expectedAmount !== undefined) body.expectedAmount = expectedAmount
+      if (incomeSchedule !== undefined) body.incomeSchedule = incomeSchedule
       return api.patch<Subcategory>(`/api/categories/${id}`, body)
     },
     onSuccess: () => {
