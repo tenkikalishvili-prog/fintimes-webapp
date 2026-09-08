@@ -3,7 +3,6 @@ import { Layout } from './components/Layout'
 import { Home } from './screens/Home'
 import { Analytics } from './screens/Analytics'
 import { Budget } from './screens/Budget'
-import { More } from './screens/More'
 import { AddTransaction } from './screens/AddTransaction'
 import { EditTransaction } from './screens/EditTransaction'
 import { History } from './screens/History'
@@ -32,7 +31,7 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="budget" element={<Budget />} />
-        <Route path="more" element={<More />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
       {/* Модальные экраны без таббара */}
       <Route path="/add" element={<AddTransaction />} />
@@ -41,7 +40,6 @@ export default function App() {
       <Route path="/goals" element={<Goals />} />
       <Route path="/payments" element={<Payments />} />
       <Route path="/edit/:id" element={<EditTransaction />} />
-      <Route path="/settings" element={<Settings />} />
     </Routes>
   )
 }

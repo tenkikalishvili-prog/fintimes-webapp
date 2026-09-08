@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useSettings, useUpdateSettings } from '../lib/queries'
 import { SkeletonBlock, ErrorState } from '../components/States'
 import { haptic } from '../lib/telegram'
@@ -17,7 +16,6 @@ const hhmm = (h: number) => `${String(h).padStart(2, '0')}:00`
 
 /** Экран настроек уведомлений: вкл/выкл и час утренней и вечерней рассылки. */
 export function Settings() {
-  const navigate = useNavigate()
   const { data, isPending, isError, refetch } = useSettings()
   const update = useUpdateSettings()
 
@@ -97,16 +95,12 @@ export function Settings() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-body no-tabbar">
-        <div className="modal-head">
-          <div className="mo">Настройки</div>
-          <button className="close" onClick={() => navigate(-1)} aria-label="Закрыть">
-            ✕
-          </button>
-        </div>
+    <>
+      <header className="apphead">
+        <div className="mo">Настройки</div>
+      </header>
 
-        <div className="block">
+      <div className="block">
           <h3>🎨 Оформление</h3>
           <div className="seg theme-seg">
             {THEME_OPTIONS.map((o) => (
@@ -239,7 +233,6 @@ export function Settings() {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </>
   )
 }

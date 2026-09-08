@@ -6,7 +6,7 @@ const TABS = [
   { to: '/', icon: '◉', label: 'Главная', end: true },
   { to: '/analytics', icon: '◔', label: 'Аналитика', end: false },
   { to: '/budget', icon: '▤', label: 'Бюджет', end: false },
-  { to: '/more', icon: '☰', label: 'Ещё', end: false },
+  { to: '/settings', icon: '⚙️', label: 'Настройки', end: false },
 ]
 
 export function TabBar() {
