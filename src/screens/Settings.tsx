@@ -3,8 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { useSettings, useUpdateSettings } from '../lib/queries'
 import { SkeletonBlock, ErrorState } from '../components/States'
 import { haptic } from '../lib/telegram'
+import { getThemePref, setThemePref, type ThemePref } from '../lib/theme'
 import { TIMEZONES } from '../lib/timezones'
 import type { NotificationSettingsInput } from '../types'
+
+const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
+  { value: 'system', label: 'Как в Telegram' },
+  { value: 'light', label: '☀️ Светлая' },
+  { value: 'dark', label: '🌙 Тёмная' },
+]
 
 const hhmm = (h: number) => `${String(h).padStart(2, '0')}:00`
 
@@ -21,6 +28,13 @@ export function Settings() {
   const [eveningOn, setEveningOn] = useState(true)
   const [eveningHour, setEveningHour] = useState(23)
   const [remindersOn, setRemindersOn] = useState(true)
+  const [theme, setTheme] = useState<ThemePref>(getThemePref)
+
+  const changeTheme = (value: ThemePref) => {
+    haptic('light')
+    setTheme(value)
+    setThemePref(value)
+  }
 
   // Актуальный час в ref: серия быстрых тапов «+/−» накапливается корректно,
   // не завися от асинхронного ре-рендера (иначе два тапа читали бы одно значение).
@@ -90,6 +104,22 @@ export function Settings() {
           <button className="close" onClick={() => navigate(-1)} aria-label="Закрыть">
             ✕
           </button>
+        </div>
+
+        <div className="block">
+          <h3>🎨 Оформление</h3>
+          <div className="seg theme-seg">
+            {THEME_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                className={`s${theme === o.value ? ' on' : ''}`}
+                onClick={() => changeTheme(o.value)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <div className="set-hint">«Как в Telegram» — тема подстраивается под оформление приложения Telegram.</div>
         </div>
 
         {isPending ? (

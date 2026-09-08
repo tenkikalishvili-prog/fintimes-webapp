@@ -15,13 +15,11 @@ function tgWebApp(): { initData?: string; initDataUnsafe?: { user?: { id?: numbe
 /** true, если запущено внутри Telegram (есть initData). */
 export const isTelegram = Boolean(tgWebApp()?.initData || WebApp?.initData)
 
-/** Инициализация: развернуть на весь экран, зафиксировать цвета под нашу тёмную тему. */
+/** Инициализация: развернуть на весь экран. Цвета шапки/фона задаёт lib/theme. */
 export function initTelegram(): void {
   try {
     WebApp.ready()
     WebApp.expand()
-    WebApp.setHeaderColor('#141210')
-    WebApp.setBackgroundColor('#141210')
   } catch {
     // вне Telegram — тихо игнорируем
   }
