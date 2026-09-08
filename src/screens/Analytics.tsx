@@ -228,16 +228,14 @@ function CashflowRow({ item, toSegment }: { item: CashflowItem; toSegment: numbe
     <div className="cfv-row">
       <span className="cfv-em">{item.emoji ?? (item.kind === 'debt' ? '🤝' : '📄')}</span>
       <span className="cfv-nm">
-        <b>
-          {item.title}
-          {item.overdue && (
-            <span className="cfv-badge od">
-              просрочен{item.originLabel ? ` · ${item.originLabel}` : ''}
-            </span>
-          )}
-          {item.overridden && !item.overdue && <span className="cfv-badge">перенесён</span>}
-        </b>
-        <small>{item.overdue ? (item.originLabel ?? 'просрочен') : `до ${item.day} числа`}</small>
+        <span className="cfv-nm-h">
+          {item.overdue && <span className="cfv-od" aria-label="Просрочен" title="Просрочен">⚠️</span>}
+          <b>
+            {item.title}
+            {item.overridden && !item.overdue && <span className="cfv-badge">перенесён</span>}
+          </b>
+        </span>
+        <small>{item.overdue && item.originLabel ? item.originLabel : `до ${item.day} числа`}</small>
       </span>
       <span className="cfv-amt">{money(item.amount)}</span>
       <button
