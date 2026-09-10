@@ -29,6 +29,7 @@ export function Debts() {
   const [dir, setDir] = useState<DebtDirection>('owe')
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Debt | null>(null)
+  const [paying, setPaying] = useState<Debt | null>(null)
 
   // Тянем все долги (включая закрытые) — раскладываем по направлению на фронте.
   const { data, isPending, isError, refetch } = useDebts(true)
@@ -107,7 +108,12 @@ export function Debts() {
             {open.length > 0 && (
               <div className="block debt-list">
                 {open.map((d) => (
-                  <DebtRow key={d.id} debt={d} onTap={() => { haptic('light'); setEditing(d) }} />
+                  <DebtRow
+                    key={d.id}
+                    debt={d}
+                    onTap={() => { haptic('light'); setEditing(d) }}
+                    onPay={() => { haptic('light'); setPaying(d) }}
+                  />
                 ))}
               </div>
             )}
@@ -128,12 +134,13 @@ export function Debts() {
 
       {adding && <DebtSheet initialDir={dir} onClose={() => setAdding(false)} />}
       {editing && <DebtSheet debt={editing} onClose={() => setEditing(null)} />}
+      {paying && <DebtPaymentSheet debt={paying} onClose={() => setPaying(null)} />}
     </div>
   )
 }
 
-/** Одна строка долга: инициал, имя, срок/заметка, остаток. */
-function DebtRow({ debt, onTap }: { debt: Debt; onTap: () => void }) {
+/** Одна строка долга: инициал, имя, срок/заметка, остаток + кнопка возврата. */
+function DebtRow({ debt, onTap, onPay }: { debt: Debt; onTap: () => void; onPay?: () => void }) {
   const overdue = isOverdue(debt)
   const initial = debt.counterparty.trim().charAt(0).toUpperCase() || '?'
 
@@ -149,22 +156,107 @@ function DebtRow({ debt, onTap }: { debt: Debt; onTap: () => void }) {
   const pct = partial ? Math.min(100, Math.round((debt.paid / debt.amount) * 100)) : 0
 
   return (
-    <button className={`debt-row${debt.isClosed ? ' closed' : ''}`} onClick={onTap}>
-      <div className="dr-ava">{debt.isClosed ? '✓' : initial}</div>
-      <div className="dr-mid">
-        <div className="dr-name">{debt.counterparty}</div>
-        {meta && <div className={`dr-meta${overdue ? ' overdue' : ''}`}>{meta}</div>}
-        {partial && (
-          <div className="dr-prog">
-            <div className="bar">
-              <i className="fill-g" style={{ width: `${pct}%` }} />
+    <div className={`debt-row${debt.isClosed ? ' closed' : ''}`}>
+      <button className="dr-tap" onClick={onTap}>
+        <div className="dr-ava">{debt.isClosed ? '✓' : initial}</div>
+        <div className="dr-mid">
+          <div className="dr-name">{debt.counterparty}</div>
+          {meta && <div className={`dr-meta${overdue ? ' overdue' : ''}`}>{meta}</div>}
+          {partial && (
+            <div className="dr-prog">
+              <div className="bar">
+                <i className="fill-g" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="dr-prog-lbl">{compact(debt.paid)} из {compact(debt.amount)}</span>
             </div>
-            <span className="dr-prog-lbl">{compact(debt.paid)} из {compact(debt.amount)}</span>
+          )}
+        </div>
+        <div className="dr-amt">{money(debt.remaining)}</div>
+      </button>
+      {onPay && (
+        <button className="dr-pay" onClick={onPay} aria-label="Записать возврат">
+          ↩︎ {debt.direction === 'owe' ? 'Вернуть' : 'Мне вернули'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** Bottom-sheet быстрого возврата по долгу (дублирует «Возвраты частями» из карточки). */
+function DebtPaymentSheet({ debt, onClose }: { debt: Debt; onClose: () => void }) {
+  const [amount, setAmount] = useState('')
+  const [payDate, setPayDate] = useState(todayISO())
+  const [err, setErr] = useState<string | null>(null)
+
+  const add = useAddDebtPayment(debt.id)
+  const remaining = Math.max(0, Math.round(debt.remaining * 100) / 100)
+  const pct = debt.amount > 0 ? Math.min(100, Math.round((debt.paid / debt.amount) * 100)) : 0
+  const isOwe = debt.direction === 'owe'
+
+  const save = async () => {
+    const amt = Number(amount || 0)
+    if (!Number.isFinite(amt) || amt <= 0) { setErr('Сумма возврата должна быть больше 0'); return }
+    if (amt > remaining) { setErr(`Больше остатка (${money(remaining)})`); return }
+    setErr(null)
+    try {
+      await add.mutateAsync({ amount: amt, date: payDate || undefined })
+      haptic('medium')
+      onClose()
+    } catch {
+      setErr('Не удалось записать возврат')
+    }
+  }
+
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grab" />
+        <h4>{isOwe ? 'Я возвращаю долг' : 'Мне возвращают долг'}</h4>
+        <p className="pay-who">
+          {isOwe ? <>Вы возвращаете <b>{debt.counterparty}</b></> : <><b>{debt.counterparty}</b> возвращает вам</>}
+          {' '}· остаток {money(remaining)}
+        </p>
+
+        <div className="bar" style={{ marginBottom: 16 }}>
+          <i className="fill-g" style={{ width: `${pct}%` }} />
+        </div>
+
+        <label className="sheet-label">Сумма возврата</label>
+        <input
+          className="input"
+          inputMode="numeric"
+          placeholder={`Остаток ${compact(remaining)}`}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+          style={{ marginBottom: 14 }}
+        />
+
+        <label className="sheet-label">Дата</label>
+        <input
+          className="input"
+          type="date"
+          value={payDate}
+          onChange={(e) => setPayDate(e.target.value)}
+          style={{ marginBottom: 14 }}
+        />
+
+        {err && (
+          <div className="toast over" style={{ marginBottom: 12 }}>
+            <span className="ti">⚠️</span>
+            <span>{err}</span>
           </div>
         )}
+
+        <button className="btn btn-primary" disabled={add.isPending || !amount} onClick={save}>
+          {add.isPending
+            ? 'Сохраняю…'
+            : `${isOwe ? 'Я вернул' : 'Мне вернули'}${amount ? ` · ${money(Number(amount))}` : ''}`}
+        </button>
+        <button className="btn btn-ghost" style={{ marginTop: 10 }} disabled={add.isPending} onClick={onClose}>
+          Отмена
+        </button>
       </div>
-      <div className="dr-amt">{money(debt.remaining)}</div>
-    </button>
+    </div>
   )
 }
 

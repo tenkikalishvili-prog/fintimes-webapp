@@ -268,7 +268,7 @@ function DebtFlow({ onDone }: { onDone: () => void }) {
           Новый долг
         </button>
         <button className={`s${mode === 'pay' ? ' on' : ''}`} onClick={() => { haptic('light'); setMode('pay') }}>
-          Платёж
+          Возврат долга
         </button>
       </div>
       {mode === 'new' ? <NewDebtForm onDone={onDone} /> : <DebtPaymentForm onDone={onDone} />}
@@ -329,14 +329,27 @@ function NewDebtForm({ onDone }: { onDone: () => void }) {
 function DebtPaymentForm({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate()
   const { data: debts, isPending, isError, refetch } = useDebts(false)
+  // Направление возврата: 'owe' — я возвращаю свой долг; 'lent' — мне возвращают.
+  const [payDir, setPayDir] = useState<DebtDirection>('owe')
   const [debtId, setDebtId] = useState<number | null>(null)
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayISO())
   const [err, setErr] = useState<string | null>(null)
 
   const add = useAddDebtPayment(debtId ?? 0)
-  const debt = (debts ?? []).find((d) => d.id === debtId) ?? null
+  const forDir = (debts ?? []).filter((d) => d.direction === payDir)
+  const debt = forDir.find((d) => d.id === debtId) ?? null
   const remaining = debt ? Math.max(0, debt.remaining) : 0
+  const isOwe = payDir === 'owe'
+
+  // При смене направления сбрасываем выбор долга (список другой).
+  const pickDir = (d: DebtDirection) => {
+    if (d === payDir) return
+    haptic('light')
+    setPayDir(d)
+    setDebtId(null)
+    setErr(null)
+  }
 
   const save = async () => {
     const amt = Number(amount || 0)
@@ -355,41 +368,53 @@ function DebtPaymentForm({ onDone }: { onDone: () => void }) {
 
   if (isPending) return <SkeletonBlock rows={4} />
   if (isError) return <ErrorState onRetry={refetch} />
-  if ((debts ?? []).length === 0) {
-    return (
-      <>
-        <EmptyState emoji="🤝" title="Нет активных долгов" sub="Заведи долг во вкладке «Новый долг» или в разделе «Долги»" />
-        <button className="btn btn-secondary" onClick={() => navigate('/debts')}>Перейти к долгам</button>
-      </>
-    )
-  }
 
   return (
     <>
-      <AmountInput amount={amount} setAmount={setAmount} />
-
-      <div className="fieldlbl">Долг</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
-        {debts!.map((d) => (
-          <button
-            key={d.id}
-            className={`field${debtId === d.id ? ' on' : ''}`}
-            onClick={() => { haptic('light'); setDebtId(d.id) }}
-          >
-            <span className="val">🤝 {d.counterparty}</span>
-            <span className="faint">{d.direction === 'owe' ? 'отдаю' : 'вернут'} · {compact(d.remaining)}</span>
-          </button>
-        ))}
+      <div className="seg" style={{ marginBottom: 16 }}>
+        <button className={`s${isOwe ? ' on' : ''}`} onClick={() => pickDir('owe')}>Я возвращаю</button>
+        <button className={`s${!isOwe ? ' on' : ''}`} onClick={() => pickDir('lent')}>Мне возвращают</button>
       </div>
 
-      <label className="sheet-label">Дата</label>
-      <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ marginBottom: 14 }} />
+      {forDir.length === 0 ? (
+        <>
+          <EmptyState
+            emoji="🤝"
+            title={isOwe ? 'Нет долгов, где вы должны' : 'Нет долгов, где должны вам'}
+            sub="Заведи долг во вкладке «Новый долг» или в разделе «Долги»"
+          />
+          <button className="btn btn-secondary" onClick={() => navigate('/debts')}>Перейти к долгам</button>
+        </>
+      ) : (
+        <>
+          <AmountInput amount={amount} setAmount={setAmount} />
 
-      {err && <div className="toast over" style={{ marginBottom: 12 }}><span className="ti">⚠️</span><span>{err}</span></div>}
+          <div className="fieldlbl">{isOwe ? 'Кому возвращаю' : 'Кто возвращает мне'}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+            {forDir.map((d) => (
+              <button
+                key={d.id}
+                className={`field${debtId === d.id ? ' on' : ''}`}
+                onClick={() => { haptic('light'); setDebtId(d.id) }}
+              >
+                <span className="val">🤝 {d.counterparty}</span>
+                <span className="faint">остаток · {compact(d.remaining)}</span>
+              </button>
+            ))}
+          </div>
 
-      <button className="btn btn-primary" disabled={add.isPending || !debtId || !amount} onClick={save}>
-        {add.isPending ? 'Сохраняю…' : `Внести${amount ? ` · ${money(Number(amount))}` : ''}`}
-      </button>
+          <label className="sheet-label">Дата</label>
+          <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ marginBottom: 14 }} />
+
+          {err && <div className="toast over" style={{ marginBottom: 12 }}><span className="ti">⚠️</span><span>{err}</span></div>}
+
+          <button className="btn btn-primary" disabled={add.isPending || !debtId || !amount} onClick={save}>
+            {add.isPending
+              ? 'Сохраняю…'
+              : `${isOwe ? 'Я вернул' : 'Мне вернули'}${amount ? ` · ${money(Number(amount))}` : ''}`}
+          </button>
+        </>
+      )}
     </>
   )
 }
