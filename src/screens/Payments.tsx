@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   useBills,
+  useCashflowPlan,
   useCategories,
   useCreateBill,
   useDeleteBill,
@@ -9,6 +10,7 @@ import {
   useUpdateBill,
 } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
+import { OverdueBlock } from '../components/OverdueBlock'
 import { ApiError } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { money, compact, monthTitle, currentMonth, shiftMonth } from '../lib/format'
@@ -22,6 +24,7 @@ export function Payments() {
   const [editing, setEditing] = useState<Bill | null>(null)
 
   const { data, isPending, isError, refetch } = useBills(month)
+  const plan = useCashflowPlan(month)
   const setPaid = useSetBillPaid()
 
   const bills = useMemo(() => data ?? [], [data])
@@ -32,6 +35,18 @@ export function Payments() {
   )
   const paidCount = bills.filter((b) => b.paid).length
   const remaining = Math.max(0, total - paidSum)
+
+  // Просрочка прошлых месяцев — только платежи (долги живут в разделе «Долги»).
+  const overdueBills = useMemo(
+    () => (plan.data?.overdue ?? []).filter((o) => o.kind === 'bill'),
+    [plan.data],
+  )
+  const overdueSum = useMemo(() => overdueBills.reduce((s, o) => s + o.amount, 0), [overdueBills])
+  const payOverdue = (it: (typeof overdueBills)[number]) => {
+    if (!it.originPeriod) return
+    haptic('medium')
+    setPaid.mutate({ id: it.id, month: it.originPeriod, paid: true })
+  }
 
   const cur = currentMonth()
   const todayDay = new Date().getDate()
@@ -68,16 +83,26 @@ export function Payments() {
           </button>
         </div>
 
-        {/* Сводка месяца */}
-        <div className="pay-sum">
+        {/* Сводка месяца — сумма включает просрочку, ниже разбивка */}
+        <div className={`pay-sum${overdueSum > 0 ? ' has-over' : ''}`}>
           <span className="ps-cap">Осталось оплатить</span>
-          <span className="ps-amt">{money(remaining)}</span>
+          <span className="ps-amt">{money(remaining + overdueSum)}</span>
+          {overdueSum > 0 && (
+            <div className="ps-break">
+              <span className="dot" />
+              <span className="lbl">в том числе просрочка</span>
+              <span className="val">{money(overdueSum)}</span>
+            </div>
+          )}
           {bills.length > 0 && (
             <span className="ps-meta">
               оплачено {paidCount} из {bills.length} · {compact(paidSum)} из {compact(total)}
             </span>
           )}
         </div>
+
+        {/* Просрочка прошлых месяцев — отдельным красным блоком, с галочками */}
+        <OverdueBlock items={overdueBills} onToggle={payOverdue} busy={setPaid.isPending} />
 
         <button
           className="btn btn-primary"

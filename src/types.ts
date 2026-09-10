@@ -412,10 +412,12 @@ export interface CashflowItem {
   counterparty: string | null
   /** Перенесён вручную в эту половину. */
   overridden: boolean
-  /** Просрочен и перенесён вперёд. */
+  /** Срок уже прошёл. */
   overdue: boolean
-  /** Исходная дата просрочки, напр. «с 28 авг». */
+  /** Исходная дата просрочки, напр. «с 28 авг» (для блока «Просрочено»). */
   originLabel: string | null
+  /** 'YYYY-MM' исходного инстанса — чтобы отметить оплату за тот период. */
+  originPeriod: string | null
 }
 
 /** Плановый доход (income-подкатегория с датой и суммой). */
@@ -450,4 +452,6 @@ export interface CashflowPlan {
   boundaryDay: number
   /** Всегда две плитки: [① до 15, ② после 15]. */
   segments: CashflowSegment[]
+  /** Просрочка прошлых месяцев — отдельным блоком (не в половинах). */
+  overdue: CashflowItem[]
 }

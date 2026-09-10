@@ -635,9 +635,15 @@ a{color:inherit;text-decoration:none}
 .pay-sum{display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--line);
   border-radius:20px;padding:16px 18px;margin-bottom:16px;position:relative;overflow:hidden}
 .pay-sum::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.pay-sum.has-over::before{background:var(--over)}
 .pay-sum .ps-cap{font-size:12px;color:var(--muted);font-weight:700}
-.pay-sum .ps-amt{font-size:26px;font-weight:800;letter-spacing:-.5px;color:var(--text)}
-.pay-sum .ps-meta{font-size:12px;color:var(--faint);font-weight:600}
+.pay-sum .ps-amt{font-size:26px;font-weight:800;letter-spacing:-.5px;color:var(--text);font-variant-numeric:tabular-nums}
+.pay-sum .ps-meta{font-size:12px;color:var(--faint);font-weight:600;margin-top:5px}
+/* строка-разбивка «в том числе просрочка» */
+.pay-sum .ps-break{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:12.5px;font-weight:700}
+.pay-sum .ps-break .dot{width:7px;height:7px;border-radius:50%;background:var(--over);flex:0 0 auto}
+.pay-sum .ps-break .lbl{color:var(--muted);font-weight:600}
+.pay-sum .ps-break .val{color:var(--over);font-variant-numeric:tabular-nums;margin-left:auto}
 .bill-list{padding:6px}
 .bill-row{display:flex;align-items:center;gap:10px}
 .bill-row+.bill-row{border-top:1px solid var(--line)}
@@ -656,3 +662,25 @@ a{color:inherit;text-decoration:none}
 .bill-amt{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap}
 .bill-row.paid .bill-title,.bill-row.paid .bill-amt{color:var(--muted)}
 .bill-row.paid .bill-amt{text-decoration:line-through}
+
+/* Красный блок «Просрочено» — общий для «Платежей» и «Аналитики» */
+.ovd{position:relative;background:var(--over-dim);border:1px solid var(--over);border-radius:18px;
+  padding:14px 14px 6px;margin-bottom:16px;overflow:hidden}
+.ovd::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--over)}
+.ovd-head{display:flex;align-items:baseline;justify-content:space-between;margin:0 2px 8px}
+.ovd-cap{font-size:13px;font-weight:800;color:var(--over)}
+.ovd-cap .n{font-weight:700;opacity:.8;font-size:12px}
+.ovd-sum{font-size:15px;font-weight:800;color:var(--over);font-variant-numeric:tabular-nums}
+.ovd-hint{font-size:11px;color:var(--muted);margin:0 2px 10px;line-height:1.4}
+.ovd-row{display:flex;align-items:center;gap:10px;padding:11px 2px}
+.ovd-row+.ovd-row{border-top:1px solid rgba(255,92,124,.25)}
+.ovd-check{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:2px solid var(--over);
+  background:none;cursor:pointer;color:#fff;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center}
+.ovd-check.on{background:var(--ok);border-color:var(--ok)}
+.ovd-check:disabled{opacity:.5;cursor:default}
+.ovd-em{width:34px;height:34px;flex:0 0 auto;border-radius:10px;background:var(--card);
+  display:flex;align-items:center;justify-content:center;font-size:16px}
+.ovd-mid{flex:1;min-width:0}
+.ovd-title{font-size:14.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ovd-meta{font-size:12px;color:var(--over);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ovd-amt{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}

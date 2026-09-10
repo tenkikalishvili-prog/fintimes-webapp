@@ -18,6 +18,7 @@ import {
 } from '../lib/queries'
 import { haptic } from '../lib/telegram'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
+import { OverdueBlock } from '../components/OverdueBlock'
 import type {
   Article,
   AnalyticsSlice,
@@ -115,7 +116,10 @@ function CashflowPlanBlock({ month }: { month: string }) {
       ) : plan.isError ? (
         <div className="block"><ErrorState onRetry={plan.refetch} /></div>
       ) : (
-        plan.data.segments.map((seg) => <CashflowTile key={seg.index} seg={seg} />)
+        <>
+          <OverdueBlock items={plan.data.overdue} />
+          {plan.data.segments.map((seg) => <CashflowTile key={seg.index} seg={seg} />)}
+        </>
       )}
     </div>
   )
@@ -124,7 +128,6 @@ function CashflowPlanBlock({ month }: { month: string }) {
 function CashflowTile({ seg }: { seg: CashflowSegment }) {
   // Обе плитки свёрнуты по умолчанию — раскрываются по тапу.
   const [open, setOpen] = useState(false)
-  const overdueCount = seg.items.filter((it) => it.overdue).length
   const restPos = seg.coverage >= 0
   const emptyBoth = seg.incomes.length === 0 && seg.items.length === 0
 
@@ -156,7 +159,6 @@ function CashflowTile({ seg }: { seg: CashflowSegment }) {
       </button>
 
       <div className="cfv-status">
-        {overdueCount > 0 && <span className="cfv-pill over">⚠️ {overdueCount} проср.</span>}
         <span className={`cfv-pill ${restPos ? 'ok' : 'over'}`}>
           {restPos ? '✓ хватает' : `не хватает ${compact(Math.abs(seg.coverage))}`}
         </span>
