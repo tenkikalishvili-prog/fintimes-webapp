@@ -144,25 +144,27 @@ function GoalRow({ goal, onTap }: { goal: Goal; onTap: () => void }) {
   }
 
   return (
-    <button className={`debt-row${goal.isDone ? ' closed' : ''}`} onClick={onTap}>
-      <div className="dr-ava">{goal.isDone ? '✓' : '🎯'}</div>
-      <div className="dr-mid">
-        <div className="dr-name">{goal.title}</div>
-        {meta && <div className={`dr-meta${overdue ? ' overdue' : ''}`}>{meta}</div>}
-        {!goal.isDone && (
-          <div className="dr-prog">
-            <div className="bar">
-              <i className="fill-g" style={{ width: `${pct}%` }} />
+    <div className={`debt-row${goal.isDone ? ' closed' : ''}`}>
+      <button className="dr-tap" onClick={onTap}>
+        <div className="dr-ava">{goal.isDone ? '✓' : '🎯'}</div>
+        <div className="dr-mid">
+          <div className="dr-name">{goal.title}</div>
+          {meta && <div className={`dr-meta${overdue ? ' overdue' : ''}`}>{meta}</div>}
+          {!goal.isDone && (
+            <div className="dr-prog">
+              <div className="bar">
+                <i className="fill-g" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="dr-prog-lbl">{compact(goal.saved)} из {compact(goal.targetAmount)}</span>
             </div>
-            <span className="dr-prog-lbl">{compact(goal.saved)} из {compact(goal.targetAmount)}</span>
-          </div>
-        )}
-        {pace !== null && (
-          <div className="dr-pace">≈ {money(pace)}/мес до цели</div>
-        )}
-      </div>
-      <div className="dr-amt">{money(goal.remaining)}</div>
-    </button>
+          )}
+          {pace !== null && (
+            <div className="dr-pace">≈ {money(pace)}/мес до цели</div>
+          )}
+        </div>
+        <div className="dr-amt">{money(goal.remaining)}</div>
+      </button>
+    </div>
   )
 }
 
