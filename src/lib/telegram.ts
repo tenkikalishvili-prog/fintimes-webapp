@@ -15,11 +15,22 @@ function tgWebApp(): { initData?: string; initDataUnsafe?: { user?: { id?: numbe
 /** true, если запущено внутри Telegram (есть initData). */
 export const isTelegram = Boolean(tgWebApp()?.initData || WebApp?.initData)
 
-/** Проставляет `html[data-tg-fullscreen]` по факту полноэкранного режима —
- *  CSS по этому атрибуту добавляет верхний safe-area отступ (под чёлку/шапку Telegram). */
-function syncFullscreenAttr(): void {
+/** Верхний отступ под системную зону Telegram (статус-бар + плавающие кнопки ✕/⋯).
+ *
+ *  НЕ завязываемся на флаг `isFullscreen` — он рассинхронён из-за двух объектов
+ *  WebApp (официальный скрипт vs бандл @twa-dev/sdk, который перетирает WebView).
+ *  Берём сами инсеты: вне полного экрана они 0 (шапку рисует сам Telegram),
+ *  в полном экране равны высоте статус-бара + ряда кнопок. Пишем inline-стилем,
+ *  чтобы перебить любые правила из ui.css. */
+function applyInsets(): void {
   try {
-    document.documentElement.toggleAttribute('data-tg-fullscreen', Boolean(WebApp.isFullscreen))
+    const sa = (WebApp.safeAreaInset ?? {}) as { top?: number }
+    const csa = (WebApp.contentSafeAreaInset ?? {}) as { top?: number }
+    const top = Math.max(0, Number(sa.top) || 0) + Math.max(0, Number(csa.top) || 0)
+    const root = document.documentElement
+    root.style.setProperty('--ft-safe-top', `${top}px`)
+    // Атрибут оставляем для прочих возможных стилей; на отступ он больше не влияет.
+    root.toggleAttribute('data-tg-fullscreen', Boolean(WebApp.isFullscreen))
   } catch {
     /* no-op */
   }
@@ -63,17 +74,23 @@ export function initTelegram(): void {
     tryFullscreen()
     setTimeout(tryFullscreen, 0)
 
-    syncFullscreenAttr()
-    WebApp.onEvent('fullscreenChanged', syncFullscreenAttr)
-    WebApp.onEvent('fullscreenFailed', syncFullscreenAttr)
+    // Верхний safe-area отступ: считаем из инсетов и обновляем по всем событиям,
+    // которые их меняют (safe-area прилетает отдельным событием ПОСЛЕ fullscreen).
+    applyInsets()
+    WebApp.onEvent('fullscreenChanged', applyInsets)
+    WebApp.onEvent('fullscreenFailed', applyInsets)
+    WebApp.onEvent('safeAreaChanged', applyInsets)
+    WebApp.onEvent('contentSafeAreaChanged', applyInsets)
 
-    // Если хост схлопнул вьюпорт (возврат из свёрнутого состояния и т.п.) — снова разворачиваем.
+    // Если хост схлопнул вьюпорт (возврат из свёрнутого состояния и т.п.) — снова
+    // разворачиваем и пересчитываем отступ.
     WebApp.onEvent('viewportChanged', () => {
       try {
         if (!WebApp.isExpanded) WebApp.expand()
       } catch {
         /* no-op */
       }
+      applyInsets()
     })
   } catch {
     // вне Telegram — тихо игнорируем
