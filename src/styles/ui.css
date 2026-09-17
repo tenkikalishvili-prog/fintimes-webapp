@@ -22,9 +22,17 @@ a{color:inherit;text-decoration:none}
   display:flex;flex-direction:column;
 }
 .app-body{
-  flex:1;padding:14px 16px calc(var(--tabbar-h) + 24px);overflow-y:auto;
+  flex:1;padding:calc(14px + var(--ft-safe-top)) 16px calc(var(--tabbar-h) + 24px);overflow-y:auto;
 }
 .app-body.no-tabbar{padding-bottom:24px}
+
+/* BL-07 · Полноэкранный режим: в fullscreen верх приложения уходит под чёлку и
+   плавающие кнопки Telegram — сдвигаем контент вниз на safe-area. Вне fullscreen и на
+   клиентах < Bot API 8.0 переменная = 0 (атрибут не проставлен / CSS-переменных нет). */
+:root{ --ft-safe-top:0px }
+html[data-tg-fullscreen]{
+  --ft-safe-top:calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+}
 
 /* ---------- Типографика-утилиты ---------- */
 .h1{font-size:26px;font-weight:800;letter-spacing:-.5px}
@@ -524,7 +532,7 @@ a{color:inherit;text-decoration:none}
   padding:12px 14px;font-size:12.5px;color:var(--text-2);margin-bottom:14px;font-weight:600}
 
 /* ---------- Онбординг (лёгкий мастер первого входа) ---------- */
-.app-body.ob{display:flex;flex-direction:column;padding-top:24px}
+.app-body.ob{display:flex;flex-direction:column;padding-top:calc(24px + var(--ft-safe-top))}
 .ob-dots{display:flex;gap:8px;justify-content:center;margin-bottom:22px}
 .ob-dots i{width:26px;height:4px;border-radius:2px;background:var(--line);transition:background .2s}
 .ob-dots i.on{background:var(--accent)}
