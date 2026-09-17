@@ -6,7 +6,7 @@ import {
   addToHomeScreen,
   checkHomeScreenStatus,
   onHomeScreenAdded,
-  type HomeScreenStatus,
+  isHomeScreenSupported,
 } from '../lib/telegram'
 import { getThemePref, setThemePref, type ThemePref } from '../lib/theme'
 import { TIMEZONES } from '../lib/timezones'
@@ -34,8 +34,10 @@ export function Settings() {
   const [remindersOn, setRemindersOn] = useState(true)
   const [theme, setTheme] = useState<ThemePref>(getThemePref)
 
-  // Иконка на рабочем столе (BL-08): проверяем статус на входе и слушаем добавление.
-  const [homeStatus, setHomeStatus] = useState<HomeScreenStatus>('unsupported')
+  // Иконка на рабочем столе (BL-08). Видимость — по синхронной поддержке клиента
+  // (8.0+), чтобы кнопка не зависела от того, ответит ли хост на проверку статуса.
+  const homeSupported = isHomeScreenSupported()
+  const [homeAdded, setHomeAdded] = useState(false)
 
   const changeTheme = (value: ThemePref) => {
     haptic('light')
@@ -44,10 +46,14 @@ export function Settings() {
   }
 
   useEffect(() => {
-    checkHomeScreenStatus().then(setHomeStatus)
+    if (!homeSupported) return
+    // Статус только помечает «уже добавлено»; кнопку показываем в любом случае.
+    checkHomeScreenStatus().then((s) => {
+      if (s === 'added') setHomeAdded(true)
+    })
     // Нативный диалог подтверждают вне React — ловим факт добавления событием.
-    return onHomeScreenAdded(() => setHomeStatus('added'))
-  }, [])
+    return onHomeScreenAdded(() => setHomeAdded(true))
+  }, [homeSupported])
 
   const addHome = () => {
     haptic('medium')
@@ -136,10 +142,10 @@ export function Settings() {
           <div className="set-hint">«Как в Telegram» — тема подстраивается под оформление приложения Telegram.</div>
         </div>
 
-        {homeStatus !== 'unsupported' && (
+        {homeSupported && (
           <div className="block">
             <h3>🏠 Быстрый запуск</h3>
-            {homeStatus === 'added' ? (
+            {homeAdded ? (
               <div className="set-item">
                 <div className="set-name">✓ Иконка на экране «Домой»</div>
                 <div className="set-sub">Приложение уже можно открывать с рабочего стола телефона.</div>

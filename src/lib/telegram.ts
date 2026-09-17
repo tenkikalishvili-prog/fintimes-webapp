@@ -102,33 +102,82 @@ export function initTelegram(): void {
  *  (тоже можно предложить); 'unsupported' — клиент/платформа не умеют. */
 export type HomeScreenStatus = 'unsupported' | 'unknown' | 'added' | 'missed'
 
+/** Реальный объект Telegram (A), сохранённый inline-скриптом ДО того, как
+ *  @twa-dev/sdk перезапишет window.Telegram.WebApp своим бандлом (B). У B версия
+ *  иногда сваливается в дефолт → используем A как резерв для проверок/вызовов. */
+function realTg(): {
+  isVersionAtLeast?: (v: string) => boolean
+  addToHomeScreen?: () => void
+} | undefined {
+  try {
+    return (window as unknown as { __ftTgReal?: ReturnType<typeof realTg> }).__ftTgReal
+  } catch {
+    return undefined
+  }
+}
+
+/** Умеет ли клиент добавлять иконку на рабочий стол (Bot API 8.0+). Синхронно.
+ *  Считаем поддержку по версии из ЛЮБОГО из двух объектов WebApp (B или реальный A),
+ *  чтобы не зависеть от рассинхронизации версии в бандле SDK. */
+export function isHomeScreenSupported(): boolean {
+  if (typeof WebApp?.addToHomeScreen !== 'function') return false
+  try {
+    if (WebApp.isVersionAtLeast('8.0')) return true
+  } catch {
+    /* пробуем реальный объект ниже */
+  }
+  try {
+    // Флаг, выставленный inline-скриптом на реальном объекте A (index.html).
+    if ((window as unknown as { __ftHomeOK?: boolean }).__ftHomeOK) return true
+    const real = realTg()
+    if (real?.isVersionAtLeast?.('8.0')) return true
+  } catch {
+    /* no-op */
+  }
+  return false
+}
+
 /** Спрашивает у клиента, добавлена ли иконка на рабочий стол (BL-08).
- *  Возвращает 'unsupported' на клиентах < 8.0 и там, где API нет (десктоп и т.п.). */
+ *  Резолвит 'unsupported' на клиентах < 8.0; 'unknown' — если метод есть, но хост
+ *  не ответил за отведённое время (тогда кнопку всё равно показываем). */
 export function checkHomeScreenStatus(): Promise<HomeScreenStatus> {
   return new Promise((resolve) => {
-    try {
-      if (
-        WebApp.isVersionAtLeast('8.0') &&
-        typeof WebApp.checkHomeScreenStatus === 'function'
-      ) {
-        WebApp.checkHomeScreenStatus((status) => resolve(status as HomeScreenStatus))
-      } else {
-        resolve('unsupported')
-      }
-    } catch {
+    if (!isHomeScreenSupported() || typeof WebApp.checkHomeScreenStatus !== 'function') {
       resolve('unsupported')
+      return
+    }
+    let done = false
+    const finish = (s: HomeScreenStatus) => {
+      if (done) return
+      done = true
+      resolve(s)
+    }
+    // Хост иногда не отвечает на web_app_check_home_screen — не зависаем.
+    const timer = setTimeout(() => finish('unknown'), 2500)
+    try {
+      WebApp.checkHomeScreenStatus((status) => {
+        clearTimeout(timer)
+        finish((status as HomeScreenStatus) || 'unknown')
+      })
+    } catch {
+      clearTimeout(timer)
+      finish('unknown')
     }
   })
 }
 
 /** Просит клиент добавить иконку Mini App на рабочий стол (BL-08).
- *  Показывает нативный диалог Telegram; результат приходит событием homeScreenAdded /
- *  homeScreenChecked. No-op на клиентах без поддержки. */
+ *  Показывает нативный диалог Telegram; результат приходит событием homeScreenAdded.
+ *  Если вызов на объекте SDK (B) бросит из-за рассинхрона версии — пробуем реальный A. */
 export function addToHomeScreen(): void {
   try {
-    if (WebApp.isVersionAtLeast('8.0') && typeof WebApp.addToHomeScreen === 'function') {
-      WebApp.addToHomeScreen()
-    }
+    WebApp.addToHomeScreen()
+    return
+  } catch {
+    /* падаем на резерв ниже */
+  }
+  try {
+    realTg()?.addToHomeScreen?.()
   } catch {
     /* не поддерживается — тихо игнорируем */
   }

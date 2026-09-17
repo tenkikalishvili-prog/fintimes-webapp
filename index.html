@@ -33,6 +33,11 @@
             try { return wa.isVersionAtLeast && wa.isVersionAtLeast(v); } catch (e) { return false; }
           };
           wa.ready();
+          // Сохраняем РЕАЛЬНЫЙ объект A и флаг поддержки «на экран Домой» (8.0+) ДО
+          // того, как @twa-dev/sdk перезапишет window.Telegram.WebApp своим бандлом B
+          // (у B версия иногда сваливается в дефолт). Приложение берёт их как резерв.
+          window.__ftTgReal = wa;
+          window.__ftHomeOK = atLeast('8.0');
           // Полная высота (все клиенты с Bot API 6.0) — убирает «шторку» на пол-экрана.
           if (wa.expand) wa.expand();
           // Свайп вниз больше не сворачивает (Bot API 7.7+).
