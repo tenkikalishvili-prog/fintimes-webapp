@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSettings, useUpdateSettings } from '../lib/queries'
 import { SkeletonBlock, ErrorState } from '../components/States'
-import { haptic } from '../lib/telegram'
+import {
+  haptic,
+  addToHomeScreen,
+  checkHomeScreenStatus,
+  onHomeScreenAdded,
+  type HomeScreenStatus,
+} from '../lib/telegram'
 import { getThemePref, setThemePref, type ThemePref } from '../lib/theme'
 import { TIMEZONES } from '../lib/timezones'
 import type { NotificationSettingsInput } from '../types'
@@ -28,10 +34,24 @@ export function Settings() {
   const [remindersOn, setRemindersOn] = useState(true)
   const [theme, setTheme] = useState<ThemePref>(getThemePref)
 
+  // Иконка на рабочем столе (BL-08): проверяем статус на входе и слушаем добавление.
+  const [homeStatus, setHomeStatus] = useState<HomeScreenStatus>('unsupported')
+
   const changeTheme = (value: ThemePref) => {
     haptic('light')
     setTheme(value)
     setThemePref(value)
+  }
+
+  useEffect(() => {
+    checkHomeScreenStatus().then(setHomeStatus)
+    // Нативный диалог подтверждают вне React — ловим факт добавления событием.
+    return onHomeScreenAdded(() => setHomeStatus('added'))
+  }, [])
+
+  const addHome = () => {
+    haptic('medium')
+    addToHomeScreen()
   }
 
   // Актуальный час в ref: серия быстрых тапов «+/−» накапливается корректно,
@@ -115,6 +135,27 @@ export function Settings() {
           </div>
           <div className="set-hint">«Как в Telegram» — тема подстраивается под оформление приложения Telegram.</div>
         </div>
+
+        {homeStatus !== 'unsupported' && (
+          <div className="block">
+            <h3>🏠 Быстрый запуск</h3>
+            {homeStatus === 'added' ? (
+              <div className="set-item">
+                <div className="set-name">✓ Иконка на экране «Домой»</div>
+                <div className="set-sub">Приложение уже можно открывать с рабочего стола телефона.</div>
+              </div>
+            ) : (
+              <>
+                <button className="btn btn-primary" onClick={addHome}>
+                  🏠 Добавить на экран «Домой»
+                </button>
+                <div className="set-hint">
+                  Создаст иконку приложения на рабочем столе телефона — запуск в один тап, без поиска в Telegram.
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {isPending ? (
           <SkeletonBlock rows={4} />

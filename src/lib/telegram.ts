@@ -97,6 +97,59 @@ export function initTelegram(): void {
   }
 }
 
+/** Статус иконки Mini App на рабочем столе (Bot API 8.0+).
+ *  'added' — уже есть; 'missed' — можно добавить; 'unknown' — клиент не знает
+ *  (тоже можно предложить); 'unsupported' — клиент/платформа не умеют. */
+export type HomeScreenStatus = 'unsupported' | 'unknown' | 'added' | 'missed'
+
+/** Спрашивает у клиента, добавлена ли иконка на рабочий стол (BL-08).
+ *  Возвращает 'unsupported' на клиентах < 8.0 и там, где API нет (десктоп и т.п.). */
+export function checkHomeScreenStatus(): Promise<HomeScreenStatus> {
+  return new Promise((resolve) => {
+    try {
+      if (
+        WebApp.isVersionAtLeast('8.0') &&
+        typeof WebApp.checkHomeScreenStatus === 'function'
+      ) {
+        WebApp.checkHomeScreenStatus((status) => resolve(status as HomeScreenStatus))
+      } else {
+        resolve('unsupported')
+      }
+    } catch {
+      resolve('unsupported')
+    }
+  })
+}
+
+/** Просит клиент добавить иконку Mini App на рабочий стол (BL-08).
+ *  Показывает нативный диалог Telegram; результат приходит событием homeScreenAdded /
+ *  homeScreenChecked. No-op на клиентах без поддержки. */
+export function addToHomeScreen(): void {
+  try {
+    if (WebApp.isVersionAtLeast('8.0') && typeof WebApp.addToHomeScreen === 'function') {
+      WebApp.addToHomeScreen()
+    }
+  } catch {
+    /* не поддерживается — тихо игнорируем */
+  }
+}
+
+/** Подписка на успешное добавление иконки. Возвращает функцию отписки. */
+export function onHomeScreenAdded(cb: () => void): () => void {
+  try {
+    WebApp.onEvent('homeScreenAdded', cb)
+    return () => {
+      try {
+        WebApp.offEvent('homeScreenAdded', cb)
+      } catch {
+        /* no-op */
+      }
+    }
+  } catch {
+    return () => {}
+  }
+}
+
 /** Telegram user id — ключ мультипользовательности. null вне Telegram (dev). */
 export function getUserId(): number | null {
   try {
