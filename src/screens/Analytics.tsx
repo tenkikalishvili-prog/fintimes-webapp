@@ -29,6 +29,8 @@ import type {
 } from '../types'
 
 const PALETTE = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)']
+// Погашение долгов — вне палитры трат: нейтральный «сланец», сигнализирует «движение ДС, не трата».
+const DEBT_COLOR = '#7e8aa2'
 
 export function Analytics() {
   const [month, setMonth] = useState(currentMonth())
@@ -309,13 +311,19 @@ function StructureBlock({
 }) {
   const [open, setOpen] = useState<string | null>(null)
 
+  // Цвет слайса: погашение долгов — фиксированный «сланец» (движение ДС, не трата);
+  // обычные группы — по палитре.
+  const sliceColor = (s: AnalyticsSlice, i: number) =>
+    s.kind === 'debt' ? DEBT_COLOR : PALETTE[i % PALETTE.length]
+  const hasDebt = article === 'expense' && slices.some((s) => s.kind === 'debt')
+
   let acc = 0
   const stops = slices
     .map((s, i) => {
       const from = total > 0 ? (acc / total) * 100 : 0
       acc += s.value
       const to = total > 0 ? (acc / total) * 100 : 0
-      return `${PALETTE[i % PALETTE.length]} ${from}% ${to}%`
+      return `${sliceColor(s, i)} ${from}% ${to}%`
     })
     .join(',')
 
@@ -333,7 +341,7 @@ function StructureBlock({
         <div className="donut" style={{ background: `conic-gradient(${stops})` }}>
           <div className="tot">
             <b>{compact(total)}</b>
-            <s>{article === 'expense' ? 'расход' : 'доход'}</s>
+            <s>{article === 'expense' ? (hasDebt ? 'отток' : 'расход') : 'доход'}</s>
           </div>
         </div>
         <div className="lg">
@@ -344,8 +352,11 @@ function StructureBlock({
             return (
               <div key={s.name}>
                 <div className={`li${hasSubs ? ' tap' : ''}`} onClick={() => toggle(s.name, hasSubs)}>
-                  <span className="dot" style={{ background: PALETTE[i % PALETTE.length] }} />
-                  <span className="nm">{s.emoji ? `${s.emoji} ` : ''}{s.name}</span>
+                  <span className="dot" style={{ background: sliceColor(s, i) }} />
+                  <span className="nm">
+                    {s.emoji ? `${s.emoji} ` : ''}{s.name}
+                    {s.kind === 'debt' && <span className="an-dtag">долг</span>}
+                  </span>
                   <span className="val">{compact(s.value)} · {pct}%</span>
                   {hasSubs && <span className={`caret${isOpen ? ' open' : ''}`}>▶</span>}
                 </div>

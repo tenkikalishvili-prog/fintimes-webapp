@@ -89,6 +89,8 @@ export interface AnalyticsSlice {
   name: string
   emoji: string | null
   value: number
+  /** 'expense' — обычная группа трат; 'debt' — синтетический слайс «Погашение долгов». */
+  kind?: 'expense' | 'debt'
   subcategories: AnalyticsSubSlice[]
 }
 
