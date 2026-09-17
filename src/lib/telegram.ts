@@ -25,21 +25,43 @@ function syncFullscreenAttr(): void {
   }
 }
 
-/** Инициализация: полноэкранный режим (BL-07). Цвета шапки/фона задаёт lib/theme. */
+/** Запрашивает полный экран, если клиент это умеет (Bot API 8.0+). Идемпотентно. */
+function tryFullscreen(): void {
+  try {
+    if (
+      WebApp.isVersionAtLeast('8.0') &&
+      typeof WebApp.requestFullscreen === 'function' &&
+      !WebApp.isFullscreen
+    ) {
+      WebApp.requestFullscreen()
+    }
+  } catch {
+    /* fullscreenFailed (планшет/десктоп/уже полноэкранно) — тихо остаёмся на expand() */
+  }
+}
+
+/** Инициализация: разворот + отключение свайпа-сворачивания + полный экран (BL-07).
+ *  Цвета шапки/фона задаёт lib/theme. */
 export function initTelegram(): void {
   try {
     WebApp.ready()
     WebApp.expand() // базовый разворот и фолбэк для клиентов < Bot API 8.0
 
-    // Полноэкранный режим (Bot API 8.0+): приложение занимает весь экран, свайп вниз
-    // больше НЕ сворачивает/не закрывает его. На старых клиентах метода нет — остаёмся на expand().
-    if (WebApp.isVersionAtLeast('8.0') && typeof WebApp.requestFullscreen === 'function') {
-      try {
-        WebApp.requestFullscreen()
-      } catch {
-        /* fullscreenFailed (планшет/десктоп/уже полноэкранно) — тихо остаёмся на expand() */
+    // Свайп вниз больше НЕ сворачивает/не закрывает приложение (Bot API 7.7+).
+    // Это отдельный от полноэкранного режима механизм и покрывает больше клиентов.
+    try {
+      if (WebApp.isVersionAtLeast('7.7') && typeof WebApp.disableVerticalSwipes === 'function') {
+        WebApp.disableVerticalSwipes()
       }
+    } catch {
+      /* не поддерживается — игнорируем */
     }
+
+    // Полноэкранный режим (Bot API 8.0+): приложение занимает весь экран (edge-to-edge).
+    // Зовём сразу и повторяем на следующем тике — ранний вызов при инициализации клиент
+    // иногда отбрасывает.
+    tryFullscreen()
+    setTimeout(tryFullscreen, 0)
 
     syncFullscreenAttr()
     WebApp.onEvent('fullscreenChanged', syncFullscreenAttr)
