@@ -19,6 +19,37 @@
     <!-- Официальный скрипт Telegram: заполняет window.Telegram.WebApp.initData
          из параметров запуска Mini App. Должен грузиться ДО приложения. -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Ранний разворот на РЕАЛЬНОМ объекте Telegram, синхронно сразу после
+         официального скрипта — ДО того как @twa-dev/sdk перезапишет
+         window.Telegram.WebApp своим бандлом. Это гарантирует, что expand()
+         и полный экран уходят на объект, реально связанный с хостом.
+         initTelegram() в приложении дублирует эти вызовы (идемпотентны). -->
+    <script>
+      (function () {
+        try {
+          var wa = window.Telegram && window.Telegram.WebApp;
+          if (!wa) return;
+          var atLeast = function (v) {
+            try { return wa.isVersionAtLeast && wa.isVersionAtLeast(v); } catch (e) { return false; }
+          };
+          wa.ready();
+          // Полная высота (все клиенты с Bot API 6.0) — убирает «шторку» на пол-экрана.
+          if (wa.expand) wa.expand();
+          // Свайп вниз больше не сворачивает (Bot API 7.7+).
+          if (atLeast('7.7') && wa.disableVerticalSwipes) wa.disableVerticalSwipes();
+          // Полный экран edge-to-edge (Bot API 8.0+). Ранний вызов клиент иногда
+          // отбрасывает — поэтому ещё раз на следующем кадре.
+          var goFull = function () {
+            try {
+              if (atLeast('8.0') && wa.requestFullscreen && !wa.isFullscreen) wa.requestFullscreen();
+            } catch (e) {}
+          };
+          goFull();
+          if (window.requestAnimationFrame) requestAnimationFrame(goFull);
+          setTimeout(goFull, 200);
+        } catch (e) { /* вне Telegram — тихо игнорируем */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

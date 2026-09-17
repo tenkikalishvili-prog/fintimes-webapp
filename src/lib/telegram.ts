@@ -66,6 +66,15 @@ export function initTelegram(): void {
     syncFullscreenAttr()
     WebApp.onEvent('fullscreenChanged', syncFullscreenAttr)
     WebApp.onEvent('fullscreenFailed', syncFullscreenAttr)
+
+    // Если хост схлопнул вьюпорт (возврат из свёрнутого состояния и т.п.) — снова разворачиваем.
+    WebApp.onEvent('viewportChanged', () => {
+      try {
+        if (!WebApp.isExpanded) WebApp.expand()
+      } catch {
+        /* no-op */
+      }
+    })
   } catch {
     // вне Telegram — тихо игнорируем
   }
