@@ -130,6 +130,11 @@ function CashflowTile({ seg }: { seg: CashflowSegment }) {
   const [open, setOpen] = useState(false)
   const restPos = seg.coverage >= 0
   const emptyBoth = seg.incomes.length === 0 && seg.items.length === 0
+  // Прогресс оплаты: показываем, только когда что-то уже оплачено в половине.
+  const paid = seg.paidAmount
+  const leftToPay = Math.max(0, seg.obligations - paid)
+  const showProgress = paid > 0
+  const allPaid = paid > 0 && leftToPay === 0
 
   return (
     <div className={`cfv-tile${open ? ' open' : ''}`}>
@@ -162,6 +167,13 @@ function CashflowTile({ seg }: { seg: CashflowSegment }) {
         <span className={`cfv-pill ${restPos ? 'ok' : 'over'}`}>
           {restPos ? '✓ хватает' : `не хватает ${compact(Math.abs(seg.coverage))}`}
         </span>
+        {showProgress && (
+          <span className={`cfv-prog${allPaid ? ' done' : ''}`}>
+            {allPaid
+              ? `✓ оплачено ${compact(paid)}`
+              : `оплачено ${compact(paid)} из ${compact(seg.obligations)} · осталось ${compact(leftToPay)}`}
+          </span>
+        )}
       </div>
 
       {open && (
@@ -227,19 +239,28 @@ function CashflowRow({ item, toSegment }: { item: CashflowItem; toSegment: numbe
   }
 
   return (
-    <div className="cfv-row">
+    <div className={`cfv-row${item.paid ? ' paid' : ''}`}>
       <span className="cfv-em">{item.emoji ?? (item.kind === 'debt' ? '🤝' : '📄')}</span>
       <span className="cfv-nm">
         <span className="cfv-nm-h">
           {item.overdue && <span className="cfv-od" aria-label="Просрочен" title="Просрочен">⚠️</span>}
           <b>
             {item.title}
-            {item.overridden && !item.overdue && <span className="cfv-badge">перенесён</span>}
+            {item.overridden && !item.overdue && !item.paid && <span className="cfv-badge">перенесён</span>}
           </b>
         </span>
-        <small>{item.overdue && item.originLabel ? item.originLabel : `до ${item.day} числа`}</small>
+        <small>
+          {item.paid
+            ? `до ${item.day} числа · ${item.kind === 'debt' ? 'возвращён' : 'оплачено'}`
+            : item.kind === 'debt' && item.paidAmount > 0
+              ? `возвращено ${money(item.paidAmount)} из ${money(item.amount)}`
+              : item.overdue && item.originLabel ? item.originLabel : `до ${item.day} числа`}
+        </small>
       </span>
       <span className="cfv-amt">{money(item.amount)}</span>
+      {item.paid ? (
+        <span className="cfv-check" aria-label="Оплачено" title="Оплачено">✓</span>
+      ) : (
       <button
         className={`cfv-mv${armed ? ' armed' : ''}`}
         disabled={pending}
@@ -248,6 +269,7 @@ function CashflowRow({ item, toSegment }: { item: CashflowItem; toSegment: numbe
       >
         {armed ? (toSegment === 2 ? 'во 2-ю?' : 'в 1-ю?') : '⇄'}
       </button>
+      )}
     </div>
   )
 }

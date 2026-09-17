@@ -355,11 +355,15 @@ a{color:inherit;text-decoration:none}
 .cfv-kpi.rest.neg{border-color:rgba(255,92,124,.35);background:linear-gradient(180deg,var(--over-dim),transparent)}
 .cfv-kpi.rest.pos .cfv-v{color:var(--ok)} .cfv-kpi.rest.neg .cfv-v{color:var(--over)}
 
-.cfv-status{display:flex;align-items:center;gap:6px;padding:10px 14px 13px}
+.cfv-status{display:flex;align-items:center;gap:6px;padding:10px 14px 13px;flex-wrap:wrap}
 .cfv-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;
   font-size:11px;font-weight:700}
 .cfv-pill.ok{background:var(--ok-dim);color:var(--ok)}
 .cfv-pill.over{background:var(--over-dim);color:var(--over)}
+/* Прогресс оплаты половины: «оплачено X из Y · осталось Z» / «✓ оплачено X» */
+.cfv-prog{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;
+  font-size:11px;font-weight:700;background:var(--accent-dim);color:var(--accent-soft)}
+.cfv-prog.done{background:var(--ok-dim);color:var(--ok)}
 
 .cfv-body{border-top:1px solid var(--line);padding:6px 12px 12px}
 .cfv-sec{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
@@ -376,6 +380,12 @@ a{color:inherit;text-decoration:none}
 .cfv-od{flex-shrink:0;font-size:12.5px;line-height:1}
 .cfv-amt{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0}
 .cfv-row.inc .cfv-amt{color:var(--ok)}
+/* Оплаченный платёж: приглушён, сумма зачёркнута, зелёная галочка вместо кнопки ⇄ */
+.cfv-row.paid .cfv-em{background:var(--ok-dim)}
+.cfv-row.paid .cfv-nm b{color:var(--muted)}
+.cfv-row.paid .cfv-amt{color:var(--faint);text-decoration:line-through;text-decoration-thickness:1.5px}
+.cfv-check{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:var(--ok);color:#06210f;
+  font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
 .cfv-badge{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;color:var(--accent-soft);
   background:var(--accent-dim);padding:1px 6px;border-radius:999px;vertical-align:middle}
 .cfv-badge.od{color:var(--over);background:var(--over-dim)}

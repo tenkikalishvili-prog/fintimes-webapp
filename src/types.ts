@@ -414,6 +414,10 @@ export interface CashflowItem {
   overridden: boolean
   /** Срок уже прошёл. */
   overdue: boolean
+  /** Обязательство закрыто полностью (платёж оплачен / долг возвращён). */
+  paid: boolean
+  /** Сколько уже оплачено/возвращено, ₽ (у долга — может быть меньше суммы). */
+  paidAmount: number
   /** Исходная дата просрочки, напр. «с 28 авг» (для блока «Просрочено»). */
   originLabel: string | null
   /** 'YYYY-MM' исходного инстанса — чтобы отметить оплату за тот период. */
@@ -436,8 +440,10 @@ export interface CashflowSegment {
   label: string
   /** «Придёт» — доход половины, ₽. */
   expectedIncome: number
-  /** «К оплате» — сумма обязательств половины, ₽. */
+  /** «К оплате» — весь план половины (оплаченные + неоплаченные), ₽. */
   obligations: number
+  /** Уже оплачено из obligations, ₽ (для строки прогресса). */
+  paidAmount: number
   /** «Останется» = доход − обязательства (может быть < 0). */
   coverage: number
   incomes: CashflowIncome[]
