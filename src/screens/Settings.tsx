@@ -7,6 +7,7 @@ import {
   checkHomeScreenStatus,
   onHomeScreenAdded,
   isHomeScreenSupported,
+  homeScreenDebug,
 } from '../lib/telegram'
 import { getThemePref, setThemePref, type ThemePref } from '../lib/theme'
 import { TIMEZONES } from '../lib/timezones'
@@ -38,6 +39,7 @@ export function Settings() {
   // (8.0+), чтобы кнопка не зависела от того, ответит ли хост на проверку статуса.
   const homeSupported = isHomeScreenSupported()
   const [homeAdded, setHomeAdded] = useState(false)
+  const [homeStatusStr, setHomeStatusStr] = useState('проверяю…') // ВРЕМЕННО для диагностики
 
   const changeTheme = (value: ThemePref) => {
     haptic('light')
@@ -46,14 +48,14 @@ export function Settings() {
   }
 
   useEffect(() => {
-    if (!homeSupported) return
     // Статус только помечает «уже добавлено»; кнопку показываем в любом случае.
     checkHomeScreenStatus().then((s) => {
+      setHomeStatusStr(s)
       if (s === 'added') setHomeAdded(true)
     })
     // Нативный диалог подтверждают вне React — ловим факт добавления событием.
     return onHomeScreenAdded(() => setHomeAdded(true))
-  }, [homeSupported])
+  }, [])
 
   const addHome = () => {
     haptic('medium')
@@ -142,9 +144,9 @@ export function Settings() {
           <div className="set-hint">«Как в Telegram» — тема подстраивается под оформление приложения Telegram.</div>
         </div>
 
-        {homeSupported && (
-          <div className="block">
-            <h3>🏠 Быстрый запуск</h3>
+        {/* BL-08. Блок временно показываем ВСЕГДА + строка диагностики — убрать после проверки. */}
+        <div className="block">
+            <h3>🏠 Быстрый запуск <span style={{ fontSize: 10, color: 'var(--muted)' }}>build-3</span></h3>
             {homeAdded ? (
               <div className="set-item">
                 <div className="set-name">✓ Иконка на экране «Домой»</div>
@@ -160,8 +162,13 @@ export function Settings() {
                 </div>
               </>
             )}
-          </div>
-        )}
+            <div
+              className="set-hint"
+              style={{ marginTop: 10, fontFamily: 'monospace', fontSize: 10, wordBreak: 'break-all' }}
+            >
+              🔧 {homeScreenDebug()} · status={homeStatusStr} · supported={String(homeSupported)}
+            </div>
+        </div>
 
         {isPending ? (
           <SkeletonBlock rows={4} />
