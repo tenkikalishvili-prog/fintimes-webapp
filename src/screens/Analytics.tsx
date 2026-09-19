@@ -277,22 +277,30 @@ function CashflowRow({ item, toSegment }: { item: CashflowItem; toSegment: numbe
 }
 
 function SummaryRow({ o }: { o: Overview }) {
-  const diff = o.income - o.expense
+  // Сводная строка — это движение денег (кэшфлоу), а не только категорийные траты:
+  //   «Доход»  = заработок + притоки по долгам/целям (занял, вернули долг, снял с цели)
+  //   «Расход» = траты + оттоки по долгам/целям (вернул долг, дал в долг, взнос в цель)
+  //   «Остаток» = Доход − Расход = o.remaining (деньги на руках за месяц)
+  // Возврат долга — это уходящие деньги, поэтому он входит в «Расход». Категорийный
+  // донат ниже остаётся «чистым» (долг там отдельным слайсом «отток»).
+  const incomeTotal = o.income + (o.cashIn ?? 0)
+  const expenseTotal = o.expense + (o.cashOut ?? 0)
+  const rest = o.remaining
   return (
     <div className="block">
       <div className="an-kpi">
         <div className="cell">
           <div className="k">Доход</div>
-          <div className="v">{compact(o.income)}</div>
+          <div className="v">{compact(incomeTotal)}</div>
         </div>
         <div className="cell">
           <div className="k">Расход</div>
-          <div className="v">{compact(o.expense)}</div>
+          <div className="v">{compact(expenseTotal)}</div>
         </div>
         <div className="cell">
-          <div className="k">{diff >= 0 ? 'Сэкономлено' : 'Перерасход'}</div>
-          <div className={`v ${diff >= 0 ? 'pos' : 'neg'}`}>
-            {diff >= 0 ? '' : '−'}{compact(Math.abs(diff))}
+          <div className="k">Остаток</div>
+          <div className={`v ${rest >= 0 ? 'pos' : 'neg'}`}>
+            {rest >= 0 ? '' : '−'}{compact(Math.abs(rest))}
           </div>
         </div>
       </div>

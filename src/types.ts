@@ -71,6 +71,8 @@ export interface Overview {
   month: string // YYYY-MM
   income: number
   expense: number
+  cashIn: number // валовой приток по долгам/целям (занял, вернули долг, снял с цели)
+  cashOut: number // валовой отток по долгам/целям (вернул долг, дал в долг, взнос в цель)
   remaining: number
   dailyLimit: number
   daysLeft: number
