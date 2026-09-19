@@ -108,6 +108,7 @@ export type HomeScreenStatus = 'unsupported' | 'unknown' | 'added' | 'missed'
 function realTg(): {
   isVersionAtLeast?: (v: string) => boolean
   addToHomeScreen?: () => void
+  platform?: string
 } | undefined {
   try {
     return (window as unknown as { __ftTgReal?: ReturnType<typeof realTg> }).__ftTgReal
@@ -116,25 +117,63 @@ function realTg(): {
   }
 }
 
+/** Платформы Telegram, где иконки Mini App на рабочем столе НЕ поддерживаются
+ *  (десктоп/веб). Значение платформы приходит в launch-параметрах и надёжно. */
+const NON_HOME_PLATFORMS = new Set([
+  'tdesktop',
+  'macos',
+  'weba',
+  'webk',
+  'web',
+  'unigram',
+])
+
 /** Умеет ли клиент добавлять иконку на рабочий стол (Bot API 8.0+). Синхронно.
- *  Считаем поддержку по версии из ЛЮБОГО из двух объектов WebApp (B или реальный A),
- *  чтобы не зависеть от рассинхронизации версии в бандле SDK. */
+ *
+ *  Гейт устойчив к «грабле двух объектов WebApp»: версия в бандле @twa-dev/sdk (B)
+ *  и платформа берутся из одного источника launch-параметров и вместе «сваливаются»
+ *  в дефолт (`6.0`/`unknown`), если бандл не поймал параметры — поэтому НЕ полагаемся
+ *  только на версию B. Логика: вне Telegram (dev-браузер) — нет; если есть любой
+ *  ПОЗИТИВНЫЙ признак 8.0+ (реальный объект A, флаг __ftHomeOK, версия любого из
+ *  объектов) — да; иначе показываем ВЕЗДЕ, КРОМЕ заведомо десктоп/веб-платформ.
+ *  Ошибаемся в сторону показа: кнопка при тапе всё равно падает на рабочий объект,
+ *  а на десктопе платформа известна точно и блок скрыт. */
 export function isHomeScreenSupported(): boolean {
+  if (!isTelegram) return false
   if (typeof WebApp?.addToHomeScreen !== 'function') return false
+
+  const platform = (() => {
+    try {
+      return String(realTg()?.platform ?? (WebApp as unknown as { platform?: string }).platform ?? '').toLowerCase()
+    } catch {
+      return ''
+    }
+  })()
+
+  // Позитивные признаки поддержки «на экран Домой» (Bot API 8.0+).
   try {
-    if (WebApp.isVersionAtLeast('8.0')) return true
-  } catch {
-    /* пробуем реальный объект ниже */
-  }
-  try {
-    // Флаг, выставленный inline-скриптом на реальном объекте A (index.html).
     if ((window as unknown as { __ftHomeOK?: boolean }).__ftHomeOK) return true
-    const real = realTg()
-    if (real?.isVersionAtLeast?.('8.0')) return true
   } catch {
     /* no-op */
   }
-  return false
+  try {
+    if (WebApp.isVersionAtLeast('8.0')) return true
+  } catch {
+    /* пробуем ниже */
+  }
+  try {
+    if (realTg()?.isVersionAtLeast?.('8.0')) return true
+  } catch {
+    /* no-op */
+  }
+
+  // Явно десктоп/веб — не поддерживается.
+  if (platform && NON_HOME_PLATFORMS.has(platform)) return false
+
+  // Мобильный или неизвестный клиент внутри Telegram: показываем. Версия в бандле
+  // могла не считаться, но метод есть, а при тапе addToHomeScreen() падает на
+  // реальный объект A. Ложный показ на редком старом клиенте безвреден (no-op).
+  return true
 }
 
 /** Спрашивает у клиента, добавлена ли иконка на рабочий стол (BL-08).
