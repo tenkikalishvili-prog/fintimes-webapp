@@ -8,6 +8,17 @@ export function money(value: number): string {
   return `${sign}${abs.toLocaleString('ru-RU').replace(/,/g, ' ')} ₽`
 }
 
+/** Оставляет только цифры — для onChange полей ввода суммы. "1 000₽" → "1000". */
+export function onlyDigits(s: string): string {
+  return s.replace(/[^\d]/g, '')
+}
+
+/** Маска ввода: группирует цифры по разрядам. "1000" → "1 000", "" → "".
+ *  В состоянии храним чистую строку цифр, форматируем только отображение (BL-01). */
+export function groupDigits(s: string): string {
+  return s ? Number(s).toLocaleString('ru-RU').replace(/,/g, ' ') : ''
+}
+
 /** Компактная сумма: 288000 → "288к", 1620000 → "1,62 млн". Без ₽. */
 export function compact(value: number): string {
   const abs = Math.abs(value)

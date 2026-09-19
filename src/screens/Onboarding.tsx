@@ -1,16 +1,13 @@
 import { useState } from 'react'
 import { useCompleteOnboarding } from '../lib/queries'
 import { haptic } from '../lib/telegram'
-import { money } from '../lib/format'
+import { money, onlyDigits, groupDigits } from '../lib/format'
 
 /** Дней в текущем месяце — для превью дневного лимита на шаге трат. */
 function daysInMonth(): number {
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
 }
-
-const onlyDigits = (s: string) => s.replace(/[^\d]/g, '')
-const grouped = (s: string) => (s ? Number(s).toLocaleString('ru-RU').replace(/,/g, ' ') : '')
 
 /**
  * Лёгкий мастер первого входа: доход + общий лимит трат.
@@ -59,7 +56,7 @@ export function Onboarding({ name }: { name: string }) {
                 className="a"
                 inputMode="numeric"
                 placeholder="0"
-                value={grouped(income)}
+                value={groupDigits(income)}
                 onChange={(e) => setIncome(onlyDigits(e.target.value))}
               />
               <div className="c">рублей в месяц · доход</div>
@@ -97,7 +94,7 @@ export function Onboarding({ name }: { name: string }) {
                 className="a"
                 inputMode="numeric"
                 placeholder="0"
-                value={grouped(spending)}
+                value={groupDigits(spending)}
                 onChange={(e) => setSpending(onlyDigits(e.target.value))}
               />
               <div className="c">рублей в месяц · группа «Траты»</div>

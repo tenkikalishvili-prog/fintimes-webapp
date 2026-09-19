@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { budgetStatus, compact, fillClass, money } from '../lib/format'
+import { budgetStatus, compact, fillClass, money, onlyDigits, groupDigits } from '../lib/format'
 import {
   useBudgetOverview,
   useSetBudget,
@@ -324,8 +324,8 @@ function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boole
               className="input"
               inputMode="numeric"
               placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+              value={groupDigits(amount)}
+              onChange={(e) => setAmount(onlyDigits(e.target.value))}
               style={{ marginBottom: 14 }}
             />
           </>
@@ -357,8 +357,8 @@ function EditSheet({ sub, isIncome, onClose }: { sub: BudgetSub; isIncome: boole
                       <input
                         inputMode="numeric"
                         placeholder="0"
-                        value={s.amount}
-                        onChange={(e) => setSlot(i, { amount: e.target.value.replace(/[^\d]/g, '') })}
+                        value={groupDigits(s.amount)}
+                        onChange={(e) => setSlot(i, { amount: onlyDigits(e.target.value) })}
                       />
                       <span>₽</span>
                     </div>

@@ -13,7 +13,7 @@ import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { OverdueBlock } from '../components/OverdueBlock'
 import { ApiError } from '../lib/api'
 import { haptic } from '../lib/telegram'
-import { money, compact, monthTitle, currentMonth, shiftMonth } from '../lib/format'
+import { money, compact, monthTitle, currentMonth, shiftMonth, onlyDigits, groupDigits } from '../lib/format'
 import type { Bill, BillInput, BillUpdateInput } from '../types'
 
 /** Раздел «Платежи» (направление C, S10): календарь обязательных платежей по месяцам. */
@@ -231,8 +231,8 @@ function BillSheet({ bill, onClose }: { bill?: Bill; onClose: () => void }) {
               className="input"
               inputMode="numeric"
               placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+              value={groupDigits(amount)}
+              onChange={(e) => setAmount(onlyDigits(e.target.value))}
             />
           </div>
           <div style={{ flex: '0 0 38%' }}>

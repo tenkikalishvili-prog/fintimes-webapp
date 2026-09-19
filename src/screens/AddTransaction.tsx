@@ -14,7 +14,7 @@ import {
 } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { haptic } from '../lib/telegram'
-import { money, compact } from '../lib/format'
+import { money, compact, onlyDigits, groupDigits } from '../lib/format'
 
 /** Тип операции в окне «+»: обычные расход/доход + движения по целям и долгам. */
 type AddKind = 'expense' | 'income' | 'goal' | 'debt'
@@ -428,9 +428,9 @@ function AmountInput({ amount, setAmount }: { amount: string; setAmount: (v: str
           className="a a-input"
           inputMode="numeric"
           placeholder="0"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
-          style={{ width: `${Math.max(1, amount.length)}ch` }}
+          value={groupDigits(amount)}
+          onChange={(e) => setAmount(onlyDigits(e.target.value))}
+          style={{ width: `${Math.max(1, groupDigits(amount).length)}ch` }}
         />
         <span className="a cur">₽</span>
       </div>

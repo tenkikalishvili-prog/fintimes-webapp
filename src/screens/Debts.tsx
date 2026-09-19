@@ -12,7 +12,7 @@ import {
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { ApiError } from '../lib/api'
 import { haptic } from '../lib/telegram'
-import { money, compact, formatTxDate } from '../lib/format'
+import { money, compact, formatTxDate, onlyDigits, groupDigits } from '../lib/format'
 import { DEBT_DIRECTION_LABELS } from '../types'
 import type { Debt, DebtDirection, DebtInput, DebtUpdateInput } from '../types'
 
@@ -226,8 +226,8 @@ function DebtPaymentSheet({ debt, onClose }: { debt: Debt; onClose: () => void }
           className="input"
           inputMode="numeric"
           placeholder={`Остаток ${compact(remaining)}`}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+          value={groupDigits(amount)}
+          onChange={(e) => setAmount(onlyDigits(e.target.value))}
           style={{ marginBottom: 14 }}
         />
 
@@ -370,8 +370,8 @@ function DebtSheet({
           className="input"
           inputMode="numeric"
           placeholder="0"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+          value={groupDigits(amount)}
+          onChange={(e) => setAmount(onlyDigits(e.target.value))}
           style={{ marginBottom: 14 }}
         />
 
@@ -508,8 +508,8 @@ function PaymentsSection({ debt }: { debt: Debt }) {
             className="input pay-amt"
             inputMode="numeric"
             placeholder={`Сумма (остаток ${compact(remaining)})`}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+            value={groupDigits(amount)}
+            onChange={(e) => setAmount(onlyDigits(e.target.value))}
           />
           <input
             className="input pay-date"

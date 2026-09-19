@@ -11,7 +11,7 @@ import {
 } from '../lib/queries'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import { haptic } from '../lib/telegram'
-import { money, compact, formatTxDate } from '../lib/format'
+import { money, compact, formatTxDate, onlyDigits, groupDigits } from '../lib/format'
 import type { Goal, GoalInput, GoalUpdateInput } from '../types'
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
@@ -256,8 +256,8 @@ function GoalSheet({ goal, onClose }: { goal?: Goal; onClose: () => void }) {
           className="input"
           inputMode="numeric"
           placeholder="0"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+          value={groupDigits(amount)}
+          onChange={(e) => setAmount(onlyDigits(e.target.value))}
           style={{ marginBottom: 14 }}
         />
 
@@ -385,8 +385,8 @@ function ContributionsSection({ goal }: { goal: Goal }) {
             className="input pay-amt"
             inputMode="numeric"
             placeholder={`Сумма (остаток ${compact(remaining)})`}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+            value={groupDigits(amount)}
+            onChange={(e) => setAmount(onlyDigits(e.target.value))}
           />
           <input
             className="input pay-date"

@@ -5,6 +5,7 @@ import { ARTICLE_LABELS } from '../types'
 import { useCategories, useDeleteTransaction, useUpdateTransaction } from '../lib/queries'
 import { SkeletonBlock, ErrorState } from '../components/States'
 import { haptic } from '../lib/telegram'
+import { onlyDigits, groupDigits } from '../lib/format'
 
 const ARTICLES: Article[] = ['expense', 'income', 'debt']
 
@@ -119,9 +120,9 @@ export function EditTransaction() {
               className="a a-input"
               inputMode="numeric"
               placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
-              style={{ width: `${Math.max(1, amount.length)}ch` }}
+              value={groupDigits(amount)}
+              onChange={(e) => setAmount(onlyDigits(e.target.value))}
+              style={{ width: `${Math.max(1, groupDigits(amount).length)}ch` }}
             />
             <span className="a cur">₽</span>
           </div>
