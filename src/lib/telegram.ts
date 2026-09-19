@@ -166,29 +166,6 @@ export function checkHomeScreenStatus(): Promise<HomeScreenStatus> {
   })
 }
 
-/** ВРЕМЕННАЯ диагностика BL-08: что реально видит приложение на устройстве.
- *  Показываем строкой на экране «Настройки», чтобы добить «кнопки не видно». */
-export function homeScreenDebug(): string {
-  const g = window as unknown as { __ftHomeOK?: boolean }
-  let ver = '?'
-  let atLeast80 = '?'
-  let hasMethod = '?'
-  let realVer = '?'
-  try {
-    ver = String((WebApp as unknown as { version?: string }).version ?? '?')
-  } catch { /* no-op */ }
-  try {
-    atLeast80 = WebApp.isVersionAtLeast('8.0') ? 'да' : 'нет'
-  } catch { atLeast80 = 'err' }
-  try {
-    hasMethod = typeof WebApp.addToHomeScreen === 'function' ? 'да' : 'нет'
-  } catch { /* no-op */ }
-  try {
-    realVer = String((realTg() as unknown as { version?: string })?.version ?? '?')
-  } catch { /* no-op */ }
-  return `ver(B)=${ver} · real(A)=${realVer} · 8.0+=${atLeast80} · метод=${hasMethod} · __ftHomeOK=${String(g.__ftHomeOK)} · support=${isHomeScreenSupported()}`
-}
-
 /** Просит клиент добавить иконку Mini App на рабочий стол (BL-08).
  *  Показывает нативный диалог Telegram; результат приходит событием homeScreenAdded.
  *  Если вызов на объекте SDK (B) бросит из-за рассинхрона версии — пробуем реальный A. */
