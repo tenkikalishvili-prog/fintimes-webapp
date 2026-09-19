@@ -6,7 +6,6 @@ import {
   addToHomeScreen,
   checkHomeScreenStatus,
   onHomeScreenAdded,
-  isHomeScreenSupported,
 } from '../lib/telegram'
 import { getThemePref, setThemePref, type ThemePref } from '../lib/theme'
 import { TIMEZONES } from '../lib/timezones'
@@ -34,9 +33,8 @@ export function Settings() {
   const [remindersOn, setRemindersOn] = useState(true)
   const [theme, setTheme] = useState<ThemePref>(getThemePref)
 
-  // Иконка на рабочем столе (BL-08). Видимость — по синхронной поддержке клиента
-  // (8.0+), чтобы кнопка не зависела от того, ответит ли хост на проверку статуса.
-  const homeSupported = isHomeScreenSupported()
+  // Иконка на рабочем столе (BL-08). Кнопку показываем всегда; статус лишь
+  // помечает «уже добавлено» строкой с галочкой.
   const [homeAdded, setHomeAdded] = useState(false)
 
   const changeTheme = (value: ThemePref) => {
@@ -141,27 +139,24 @@ export function Settings() {
           <div className="set-hint">«Как в Telegram» — тема подстраивается под оформление приложения Telegram.</div>
         </div>
 
-        {/* BL-08. Иконка Mini App на рабочий стол — только на клиентах, которые это умеют (8.0+). */}
-        {homeSupported && (
-          <div className="block">
-            <h3>🏠 Быстрый запуск</h3>
-            {homeAdded ? (
-              <div className="set-item">
-                <div className="set-name">✓ Иконка на экране «Домой»</div>
-                <div className="set-sub">Приложение уже можно открывать с рабочего стола телефона.</div>
-              </div>
-            ) : (
-              <>
-                <button className="btn btn-primary" onClick={addHome}>
-                  🏠 Добавить на экран «Домой»
-                </button>
-                <div className="set-hint">
-                  Создаст иконку приложения на рабочем столе телефона — запуск в один тап, без поиска в Telegram.
-                </div>
-              </>
-            )}
+        {/* BL-08. Иконка Mini App на рабочий стол. Кнопку показываем всегда: детект
+            поддержки на реальных клиентах оказался ненадёжным (грабля двух объектов
+            WebApp), а на неподдерживающих клиентах тап просто ничего не делает. */}
+        <div className="block">
+          <h3>🏠 Быстрый запуск</h3>
+          {homeAdded && (
+            <div className="set-item">
+              <div className="set-name">✓ Иконка на экране «Домой»</div>
+              <div className="set-sub">Приложение уже можно открывать с рабочего стола телефона.</div>
+            </div>
+          )}
+          <button className="btn btn-primary" onClick={addHome}>
+            🏠 Добавить на экран «Домой»
+          </button>
+          <div className="set-hint">
+            Создаст иконку приложения на рабочем столе телефона — запуск в один тап, без поиска в Telegram.
           </div>
-        )}
+        </div>
 
         {isPending ? (
           <SkeletonBlock rows={4} />
