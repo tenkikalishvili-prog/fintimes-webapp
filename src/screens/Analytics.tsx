@@ -69,9 +69,6 @@ export function Analytics() {
         </button>
       </div>
 
-      {/* ⓪ Платёжный календарь — за выбранный месяц */}
-      <CashflowPlanBlock month={month} />
-
       {/* ② Сводка месяца */}
       {overview.data ? <SummaryRow o={overview.data} /> : <SkeletonBlock rows={1} />}
 
@@ -100,6 +97,9 @@ export function Analytics() {
       ) : (
         <StructureBlock total={analytics.data.total} slices={analytics.data.slices} article={article} />
       )}
+
+      {/* ⓪ Платёжный календарь — перенесён под структуру трат (донат) */}
+      <CashflowPlanBlock month={month} />
 
       {/* ④ План vs факт (расходы) */}
       {budget.data && <BudgetVsFact groups={budget.data} />}
