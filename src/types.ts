@@ -74,6 +74,11 @@ export interface Overview {
   cashIn: number // валовой приток по долгам/целям (занял, вернули долг, снял с цели)
   cashOut: number // валовой отток по долгам/целям (вернул долг, дал в долг, взнос в цель)
   remaining: number
+  // Блок «Долги» (только долги, без целей): движение за месяц + накопительная позиция.
+  debtIn: number // пришло: занял · вернули мне
+  debtOut: number // ушло: вернул свой долг · дал в долг
+  debtIOwe: number // я должен (накопительно, непогашенный остаток)
+  debtOwedToMe: number // мне должны (накопительно)
   dailyLimit: number
   daysLeft: number
   hasBudget: boolean

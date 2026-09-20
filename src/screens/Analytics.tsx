@@ -29,8 +29,6 @@ import type {
 } from '../types'
 
 const PALETTE = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)']
-// Погашение долгов — вне палитры трат: нейтральный «сланец», сигнализирует «движение ДС, не трата».
-const DEBT_COLOR = '#7e8aa2'
 
 export function Analytics() {
   const [month, setMonth] = useState(currentMonth())
@@ -69,8 +67,8 @@ export function Analytics() {
         </button>
       </div>
 
-      {/* ② Сводка месяца */}
-      {overview.data ? <SummaryRow o={overview.data} /> : <SkeletonBlock rows={1} />}
+      {/* ② Сводка месяца: деньги (доход/расход/остаток) · долги · свободно за месяц */}
+      {overview.data ? <MonthSummary o={overview.data} /> : <SkeletonBlock rows={3} />}
 
       {/* ③ Структура: тумблер + donut + drill-down */}
       <div className="seg" style={{ marginBottom: 12 }}>
@@ -276,33 +274,111 @@ function CashflowRow({ item, toSegment }: { item: CashflowItem; toSegment: numbe
   )
 }
 
-function SummaryRow({ o }: { o: Overview }) {
-  //   «Доход»  = только заработок/поступления (статья income). Взятое в долг и возвраты
-  //              по долгам — это НЕ доход, поэтому в «Доход» не входят.
-  //   «Расход» = траты по категориям + уплата долга и прочие оттоки (o.cashOut).
-  //   «Остаток» = деньги на руках за месяц (o.remaining = income − expense + приток − отток).
-  const incomeTotal = o.income
-  const expenseTotal = o.expense + (o.cashOut ?? 0)
-  const rest = o.remaining
+function MonthSummary({ o }: { o: Overview }) {
+  // Три отдельные сущности, не смешиваем:
+  //   «Остаток» = Доход − Расход (чистый: только заработок и траты по категориям).
+  //   «Долги»   = движение по долгам за месяц (без целей) + накопительная позиция.
+  //   «Свободно за месяц» = остаток + итог долгов (сколько реально осталось деньгами).
+  const rest = o.income - o.expense
+  const debtNet = (o.debtIn ?? 0) - (o.debtOut ?? 0)
+  const free = rest + debtNet
+  const showDebts =
+    (o.debtIn ?? 0) > 0 || (o.debtOut ?? 0) > 0 || (o.debtIOwe ?? 0) > 0 || (o.debtOwedToMe ?? 0) > 0
+
   return (
-    <div className="block">
-      <div className="an-kpi">
-        <div className="cell">
-          <div className="k">Доход</div>
-          <div className="v">{compact(incomeTotal)}</div>
-        </div>
-        <div className="cell">
-          <div className="k">Расход</div>
-          <div className="v">{compact(expenseTotal)}</div>
-        </div>
-        <div className="cell">
-          <div className="k">Остаток</div>
-          <div className={`v ${rest >= 0 ? 'pos' : 'neg'}`}>
-            {rest >= 0 ? '' : '−'}{compact(Math.abs(rest))}
+    <>
+      <div className="an-seclabel">Деньги за месяц</div>
+      <div className="block">
+        <div className="an-kpi">
+          <div className="cell">
+            <div className="k">Доход</div>
+            <div className="v">{compact(o.income)}</div>
+          </div>
+          <div className="cell">
+            <div className="k">Расход</div>
+            <div className="v">{compact(o.expense)}</div>
+          </div>
+          <div className="cell accent">
+            <div className="k">Остаток</div>
+            <div className={`v ${rest >= 0 ? 'pos' : 'neg'}`}>
+              {rest >= 0 ? '' : '−'}{compact(Math.abs(rest))}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {showDebts && <DebtBlock o={o} net={debtNet} />}
+
+      <div className="an-seclabel">Итог</div>
+      <div className="an-free">
+        <div className="lbl">Свободно за месяц</div>
+        <div className={`big ${free >= 0 ? '' : 'neg'}`}>
+          {free >= 0 ? '' : '−'}{compact(Math.abs(free))} <span className="cur">₽</span>
+        </div>
+        <div className="exp">
+          остаток {compact(rest)} <span className="op">+</span> долги {compact(debtNet)}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function DebtBlock({ o, net }: { o: Overview; net: number }) {
+  const [open, setOpen] = useState(false)
+  const cashIn = o.debtIn ?? 0
+  const cashOut = o.debtOut ?? 0
+  const iOwe = o.debtIOwe ?? 0
+  const owed = o.debtOwedToMe ?? 0
+  const hasPosition = iOwe > 0 || owed > 0
+  const netSign = net > 0 ? '+' : net < 0 ? '−' : ''
+  const netCls = net > 0 ? 'plus' : net < 0 ? 'minus' : 'zero'
+
+  return (
+    <>
+      <div className="an-seclabel">Долги <span className="sub">· не доход и не расход</span></div>
+      <div className="an-dmini">
+        <div className="cell">
+          <div className="k"><span className="ar in">↓</span> Пришло</div>
+          <div className="v in">+{compact(cashIn)}</div>
+          <div className="det">занял · вернули мне</div>
+        </div>
+        <div className="cell">
+          <div className="k"><span className="ar out">↑</span> Ушло</div>
+          <div className="v out">−{compact(cashOut)}</div>
+          <div className="det">вернул · дал в долг</div>
+        </div>
+      </div>
+      <div className={`an-dfold${open ? ' open' : ''}`}>
+        <button className="an-dfold-head" onClick={() => { haptic('light'); setOpen(!open) }}>
+          <span className="lead">
+            Долги: итог <span className={`amt ${netCls}`}>{netSign}{compact(Math.abs(net))}</span>
+          </span>
+          <span className="tail">
+            <span className="hint">позиция</span>
+            <span className="chev">▾</span>
+          </span>
+        </button>
+        {open && (
+          <div className="an-dfold-body">
+            <div className="ttl">Долговая позиция · всего</div>
+            {hasPosition ? (
+              <div className="an-pos">
+                <div className="cell owe">
+                  <div className="k">Я должен</div>
+                  <div className="v">{compact(iOwe)}</div>
+                </div>
+                <div className="cell owed">
+                  <div className="k">Мне должны</div>
+                  <div className="v">{compact(owed)}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="an-pos-clean">✓ Открытых долгов нет</div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -317,11 +393,7 @@ function StructureBlock({
 }) {
   const [open, setOpen] = useState<string | null>(null)
 
-  // Цвет слайса: погашение долгов — фиксированный «сланец» (движение ДС, не трата);
-  // обычные группы — по палитре.
-  const sliceColor = (s: AnalyticsSlice, i: number) =>
-    s.kind === 'debt' ? DEBT_COLOR : PALETTE[i % PALETTE.length]
-  const hasDebt = article === 'expense' && slices.some((s) => s.kind === 'debt')
+  const sliceColor = (i: number) => PALETTE[i % PALETTE.length]
 
   let acc = 0
   const stops = slices
@@ -329,7 +401,7 @@ function StructureBlock({
       const from = total > 0 ? (acc / total) * 100 : 0
       acc += s.value
       const to = total > 0 ? (acc / total) * 100 : 0
-      return `${sliceColor(s, i)} ${from}% ${to}%`
+      return `${sliceColor(i)} ${from}% ${to}%`
     })
     .join(',')
 
@@ -347,7 +419,7 @@ function StructureBlock({
         <div className="donut" style={{ background: `conic-gradient(${stops})` }}>
           <div className="tot">
             <b>{compact(total)}</b>
-            <s>{article === 'expense' ? (hasDebt ? 'отток' : 'расход') : 'доход'}</s>
+            <s>{article === 'expense' ? 'расход' : 'доход'}</s>
           </div>
         </div>
         <div className="lg">
@@ -358,10 +430,9 @@ function StructureBlock({
             return (
               <div key={s.name}>
                 <div className={`li${hasSubs ? ' tap' : ''}`} onClick={() => toggle(s.name, hasSubs)}>
-                  <span className="dot" style={{ background: sliceColor(s, i) }} />
+                  <span className="dot" style={{ background: sliceColor(i) }} />
                   <span className="nm">
                     {s.emoji ? `${s.emoji} ` : ''}{s.name}
-                    {s.kind === 'debt' && <span className="an-dtag">долг</span>}
                   </span>
                   <span className="val">{compact(s.value)} · {pct}%</span>
                   {hasSubs && <span className={`caret${isOpen ? ' open' : ''}`}>▶</span>}
