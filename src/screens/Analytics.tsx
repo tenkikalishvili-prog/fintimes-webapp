@@ -278,10 +278,12 @@ function MonthSummary({ o }: { o: Overview }) {
   // Три отдельные сущности, не смешиваем:
   //   «Остаток» = Доход − Расход (чистый: только заработок и траты по категориям).
   //   «Долги»   = движение по долгам за месяц (без целей) + накопительная позиция.
-  //   «Свободно за месяц» = остаток + итог долгов (сколько реально осталось деньгами).
+  //   «Свободно за месяц» = остаток − то, что долги забрали (вернул + дал − вернули мне).
+  //     Заём НЕ считается доходом, поэтому не добавляет свободных денег (см. бэк: free).
   const rest = o.income - o.expense
-  const debtNet = (o.debtIn ?? 0) - (o.debtOut ?? 0)
-  const free = rest + debtNet
+  const debtNet = (o.debtIn ?? 0) - (o.debtOut ?? 0) // движение ДС по долгам (плитка «Долги: итог»)
+  const free = o.free // «Свободно за месяц» — источник истины с бэка
+  const debtImpact = rest - free // сколько долги забрали из свободного (+ забрали, − добавили)
   const showDebts =
     (o.debtIn ?? 0) > 0 || (o.debtOut ?? 0) > 0 || (o.debtIOwe ?? 0) > 0 || (o.debtOwedToMe ?? 0) > 0
 
@@ -316,7 +318,8 @@ function MonthSummary({ o }: { o: Overview }) {
           {free >= 0 ? '' : '−'}{compact(Math.abs(free))} <span className="cur">₽</span>
         </div>
         <div className="exp">
-          остаток {compact(rest)} <span className="op">+</span> долги {compact(debtNet)}
+          остаток {compact(rest)}{' '}
+          <span className="op">{debtImpact >= 0 ? '−' : '+'}</span> долги {compact(Math.abs(debtImpact))}
         </div>
       </div>
     </>
@@ -329,6 +332,16 @@ function DebtBlock({ o, net }: { o: Overview; net: number }) {
   const cashOut = o.debtOut ?? 0
   const iOwe = o.debtIOwe ?? 0
   const owed = o.debtOwedToMe ?? 0
+  // Подписи плиток движения адаптивны: если в притоке/оттоке ровно один смысл —
+  // называем его глаголом (Занял / Вернул / …); если оба — обобщаем (Пришло / Ушло).
+  const borrowed = o.debtBorrowed ?? 0 // занял
+  const returned = o.debtReturned ?? 0 // вернули мне
+  const repaid = o.debtRepaid ?? 0 // вернул свой долг
+  const lent = o.debtLent ?? 0 // дал в долг
+  const inLabel = borrowed > 0 && returned > 0 ? 'Пришло' : returned > 0 ? 'Вернули мне' : 'Занял'
+  const inDet = borrowed > 0 && returned > 0 ? 'занял · вернули мне' : returned > 0 ? 'вернули мне' : 'взял в долг'
+  const outLabel = repaid > 0 && lent > 0 ? 'Ушло' : lent > 0 ? 'Дал в долг' : 'Вернул'
+  const outDet = repaid > 0 && lent > 0 ? 'вернул · дал в долг' : lent > 0 ? 'дал в долг' : 'отдал долг'
   const hasPosition = iOwe > 0 || owed > 0
   const netSign = net > 0 ? '+' : net < 0 ? '−' : ''
   const netCls = net > 0 ? 'plus' : net < 0 ? 'minus' : 'zero'
@@ -338,14 +351,14 @@ function DebtBlock({ o, net }: { o: Overview; net: number }) {
       <div className="an-seclabel">Долги <span className="sub">· не доход и не расход</span></div>
       <div className="an-dmini">
         <div className="cell">
-          <div className="k"><span className="ar in">↓</span> Пришло</div>
-          <div className="v in">+{compact(cashIn)}</div>
-          <div className="det">занял · вернули мне</div>
+          <div className="k"><span className="ar">↓</span> {inLabel}</div>
+          <div className="v">{compact(cashIn)}</div>
+          <div className="det">{inDet}</div>
         </div>
         <div className="cell">
-          <div className="k"><span className="ar out">↑</span> Ушло</div>
-          <div className="v out">−{compact(cashOut)}</div>
-          <div className="det">вернул · дал в долг</div>
+          <div className="k"><span className="ar out">↑</span> {outLabel}</div>
+          <div className="v out">{compact(cashOut)}</div>
+          <div className="det">{outDet}</div>
         </div>
       </div>
       <div className={`an-dfold${open ? ' open' : ''}`}>

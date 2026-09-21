@@ -79,6 +79,12 @@ export interface Overview {
   debtOut: number // ушло: вернул свой долг · дал в долг
   debtIOwe: number // я должен (накопительно, непогашенный остаток)
   debtOwedToMe: number // мне должны (накопительно)
+  // Разбор долговых движений месяца по смыслу (для «Свободно за месяц»).
+  debtBorrowed: number // занял — деньги пришли, но это НЕ доход
+  debtRepaid: number // вернул свой долг — реальная выплата из заработка
+  debtLent: number // дал в долг — вышло из кармана
+  debtReturned: number // вернули мне — вернулось в карман
+  free: number // «Свободно за месяц» = доход − расход − (вернул + дал − вернули мне)
   dailyLimit: number
   daysLeft: number
   hasBudget: boolean
