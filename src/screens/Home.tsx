@@ -67,7 +67,7 @@ export function Home() {
             </div>
             {data.hasBudget ? (
               <div className="brow">
-                <span><span className="k">Остаток месяца</span><br /><b>{compact(data.remaining)} {sign}</b></span>
+                <span><span className="k">Свободно за месяц</span><br /><b>{compact(data.free)} {sign}</b></span>
                 <span style={{ textAlign: 'right' }}><span className="k">Дней</span><br /><b>{data.daysLeft}</b></span>
               </div>
             ) : (
