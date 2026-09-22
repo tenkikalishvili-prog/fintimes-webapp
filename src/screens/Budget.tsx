@@ -95,6 +95,42 @@ export function Budget() {
         </div>
       ) : (
         <>
+          {/* Пейджер над каруселью: стрелки ‹ ›, счётчик «N из M» и трек —
+              явный знак, что категории листаются вбок (не только точки снизу).
+              Стрелки гаснут на концах. Прячем при одной категории. */}
+          {data.length > 1 && (
+            <div className="bpager">
+              <button
+                className="bpager-arrow"
+                disabled={active === 0}
+                aria-label="Предыдущая категория"
+                onClick={() => goto(active - 1)}
+              >
+                ‹
+              </button>
+              <div className="bpager-mid">
+                <div className="bpager-name">
+                  {data[active]?.emoji ? `${data[active].emoji} ` : ''}
+                  {data[active]?.group}
+                </div>
+                <div className="bpager-count">{active + 1} из {data.length}</div>
+                <div className="bpager-track">
+                  {data.map((g, i) => (
+                    <i key={g.group} className={i === active ? 'on' : ''} />
+                  ))}
+                </div>
+              </div>
+              <button
+                className="bpager-arrow"
+                disabled={active === data.length - 1}
+                aria-label="Следующая категория"
+                onClick={() => goto(active + 1)}
+              >
+                ›
+              </button>
+            </div>
+          )}
+
           {/* Карусель: одна «страница» = категория со своими подкатегориями.
               Название категории — заголовком внутри блока итога. Свайп + точки. */}
           <div className="bcar" ref={carRef} onScroll={onScroll}>

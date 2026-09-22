@@ -301,6 +301,8 @@ a{color:inherit;text-decoration:none}
 /* Долги: две плитки Пришло/Ушло */
 .an-dmini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .an-dmini .cell{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:11px 12px;min-width:0}
+/* Светлая тема: --bg2 почти сливается с фоном → белая подложка, как у блока итога ниже */
+:root[data-theme="light"] .an-dmini .cell{background:var(--card)}
 .an-dmini .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;
   display:flex;align-items:center;gap:6px}
 .an-dmini .k .ar.in{color:var(--ok)} .an-dmini .k .ar.out{color:var(--over)}
@@ -334,16 +336,20 @@ a{color:inherit;text-decoration:none}
 .an-pos-clean{background:var(--ok-dim);border:1px solid rgba(70,213,133,.3);border-radius:14px;
   padding:12px 14px;font-size:12.5px;color:var(--ok);font-weight:700}
 
-/* Свободно за месяц — жёлтая карточка-итог */
-.an-free{background:linear-gradient(180deg,rgba(244,218,30,.10),transparent);border:1px solid rgba(244,218,30,.28);
-  border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
-.an-free .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
-.an-free .big{font-size:30px;font-weight:800;letter-spacing:-.03em;margin:5px 0 4px;
-  font-variant-numeric:tabular-nums;color:var(--yellow)}
-.an-free .big.neg{color:var(--over)}
-.an-free .big .cur{font-size:18px;color:var(--muted)}
-.an-free .exp{font-size:11.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
-.an-free .exp .op{color:var(--faint);margin:0 3px}
+/* Свободно за месяц — сплошная жёлтая карточка-итог (логика .hero с Главной):
+   заливка --yellow + тёмный текст --on-yellow одинаково читаются в обеих темах.
+   Минус показываем знаком «−» (текст остаётся тёмным, не красным). */
+.an-free{background:var(--yellow);border-radius:var(--r-xl);padding:17px 19px 16px;color:var(--on-yellow);
+  position:relative;overflow:hidden;margin-bottom:12px;box-shadow:var(--sh-yellow)}
+.an-free::after{content:"💰";position:absolute;right:-6px;bottom:-14px;font-size:74px;opacity:.16;transform:rotate(-12deg)}
+.an-free .lbl{font-size:11.5px;font-weight:800;opacity:.7;text-transform:uppercase;letter-spacing:.05em}
+.an-free .big{font-size:34px;font-weight:800;letter-spacing:-1px;line-height:1;margin:8px 0 0;
+  font-variant-numeric:tabular-nums;color:var(--on-yellow);position:relative;z-index:2}
+.an-free .big.neg{color:var(--on-yellow)}
+.an-free .big .cur{font-size:18px;font-weight:800;opacity:.55}
+.an-free .exp{font-size:12px;font-weight:700;opacity:.62;margin-top:11px;
+  font-variant-numeric:tabular-nums;position:relative;z-index:2}
+.an-free .exp .op{opacity:.7;margin:0 3px}
 
 /* Легенда-строка кликабельна для раскрытия подкатегорий */
 .lg .li.tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -550,6 +556,19 @@ a{color:inherit;text-decoration:none}
 .bcat-dots{display:flex;gap:7px;justify-content:center;margin-top:8px}
 .bcat-dots button{width:7px;height:7px;border-radius:50%;background:var(--line);border:none;padding:0;cursor:pointer}
 .bcat-dots button.on{background:var(--accent);width:18px;border-radius:4px}
+/* Пейджер карусели: стрелки + счётчик + трек — знак, что категории листаются вбок */
+.bpager{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.bpager-arrow{flex:0 0 auto;width:36px;height:36px;border-radius:12px;background:var(--card);
+  border:1px solid var(--line);color:var(--text);font-size:18px;line-height:1;
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.bpager-arrow:active{background:var(--accent);border-color:var(--accent);color:#fff}
+.bpager-arrow:disabled{opacity:.32;pointer-events:none}
+.bpager-mid{flex:1;min-width:0;text-align:center}
+.bpager-name{font-size:13.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bpager-count{font-size:11px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;margin-top:1px}
+.bpager-track{display:flex;gap:4px;justify-content:center;margin-top:6px}
+.bpager-track i{height:3px;border-radius:2px;background:var(--line);flex:1;max-width:26px}
+.bpager-track i.on{background:var(--accent)}
 
 /* ---------- Затемнение + bottom-sheet ---------- */
 .scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);
@@ -573,7 +592,10 @@ a{color:inherit;text-decoration:none}
 .cat-add:active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .add-row{display:flex;gap:8px}
 .add-row .add-emoji{width:56px;flex:0 0 auto;text-align:center;padding-left:0;padding-right:0}
-.del-btn{margin-top:10px}
+/* Кнопка-триггер удаления (1-й тап): красный текст на прозрачном фоне, чтобы
+   читалась как деструктивная. Подтверждение (2-й тап) — залитый .btn-danger. */
+.del-btn{margin-top:10px;color:var(--over);border-color:var(--over)}
+.del-btn:active{background:var(--over-dim)}
 .del-note{font-size:12px;color:var(--faint);margin:14px 0 8px;line-height:1.4}
 .del-row{display:flex;gap:10px}
 .del-row .btn{flex:1}
