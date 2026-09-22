@@ -36,6 +36,11 @@ export function Home() {
     .filter((t) => (filter === 'all' ? true : t.article === filter))
     .slice(0, RECENT_LIMIT)
 
+  // «Можно потратить сегодня» = свободные деньги месяца ÷ оставшиеся дни (с учётом долгов).
+  // Считаем из того же free, что и «Свободно за месяц» ниже, чтобы числа сходились.
+  const dailyFree =
+    data && data.daysLeft > 0 ? Math.max(0, Math.round(data.free / data.daysLeft)) : 0
+
   return (
     <>
       <header className="apphead">
@@ -63,16 +68,12 @@ export function Home() {
             <span className="flag"><i>{sign}</i> {me.data?.currency === 'RUB' || !me.data ? 'Рубли' : me.data.currency}</span>
             <div className="lbl">Можно потратить сегодня</div>
             <div className="big">
-              {Math.round(data.dailyLimit).toLocaleString('ru-RU').replace(/,/g, ' ')} <small>{sign}</small>
+              {dailyFree.toLocaleString('ru-RU').replace(/,/g, ' ')} <small>{sign}</small>
             </div>
-            {data.hasBudget ? (
-              <div className="brow">
-                <span><span className="k">Свободно за месяц</span><br /><b>{compact(data.free)} {sign}</b></span>
-                <span style={{ textAlign: 'right' }}><span className="k">Дней</span><br /><b>{data.daysLeft}</b></span>
-              </div>
-            ) : (
-              <div className="meta">Задай бюджет «Траты», чтобы видеть дневной лимит</div>
-            )}
+            <div className="brow">
+              <span><span className="k">Свободно за месяц</span><br /><b>{compact(data.free)} {sign}</b></span>
+              <span style={{ textAlign: 'right' }}><span className="k">Дней</span><br /><b>{data.daysLeft}</b></span>
+            </div>
           </div>
 
           {/* Быстрые действия */}
