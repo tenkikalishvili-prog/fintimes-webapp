@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getUserName, haptic } from '../lib/telegram'
 import { compact, money, budgetStatus, fillClass, formatTxDate } from '../lib/format'
-import { useMe, useOverview, useTransactions, useDeleteTransaction } from '../lib/queries'
+import { useMe, useOverview, useStreak, useTransactions, useDeleteTransaction } from '../lib/queries'
+import { StreakSheet } from '../components/StreakSheet'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import type { Article } from '../types'
 
@@ -29,6 +30,8 @@ export function Home() {
   const del = useDeleteTransaction()
   const [filter, setFilter] = useState<Filter>('all')
   const [armed, setArmed] = useState<number | null>(null)
+  const streak = useStreak()
+  const [streakOpen, setStreakOpen] = useState(false)
   const name = me.data?.name?.split(' ')[0] || getUserName()
   const sign = CURRENCY_SIGN[me.data?.currency ?? 'RUB'] ?? '₽'
 
@@ -48,8 +51,23 @@ export function Home() {
           <div className="hi">Привет, {name} 👋</div>
           <div className="mo">{data ? monthTitle(data.month) : ' '}</div>
         </div>
-        <div className="avatar">{name[0]?.toUpperCase() ?? 'Т'}</div>
+        <div className="hr">
+          {streak.data && (
+            <button
+              className={`stk-chip${streak.data.current > 0 ? ' on' : ''}${streak.data.atRisk ? ' risk' : ''}`}
+              onClick={() => { haptic('light'); setStreakOpen(true) }}
+              aria-label="Финансовая серия"
+            >
+              <span className="fl">🔥</span>
+              {streak.data.current}
+            </button>
+          )}
+          <div className="avatar">{name[0]?.toUpperCase() ?? 'Т'}</div>
+        </div>
       </header>
+      {streakOpen && streak.data && (
+        <StreakSheet streak={streak.data} onClose={() => setStreakOpen(false)} />
+      )}
 
       {isPending ? (
         <>

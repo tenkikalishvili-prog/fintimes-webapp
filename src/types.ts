@@ -541,3 +541,17 @@ export interface CreditRepaymentInput {
   amount: number
   date?: string
 }
+
+// ── Геймификация: серия «день закрыт» (G1) ─────────────────────────────────
+export interface Streak {
+  /** Текущая серия — дней подряд «день закрыт». */
+  current: number
+  /** Рекорд. */
+  longest: number
+  /** Сегодняшний день уже закрыт (операция или «Трат не было»). */
+  closedToday: boolean
+  /** Серия идёт, но сегодня день ещё не закрыт. */
+  atRisk: boolean
+  /** Локальная дата пользователя, ISO YYYY-MM-DD. */
+  today: string
+}

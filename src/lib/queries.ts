@@ -2,6 +2,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './api'
 import type {
+  Streak,
   Analytics,
   Article,
   Bill,
@@ -152,6 +153,7 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['transactions'] })
   qc.invalidateQueries({ queryKey: ['history'] })
   qc.invalidateQueries({ queryKey: ['goals'] })
+  qc.invalidateQueries({ queryKey: ['streak'] })
   qc.invalidateQueries({ queryKey: ['credits'] })
   qc.invalidateQueries({ queryKey: ['debts'] })
   qc.invalidateQueries({ queryKey: ['cashflow-plan'] })
@@ -608,5 +610,22 @@ export function useSetCreditClosed() {
     mutationFn: ({ id, closed }: { id: number; closed: boolean }) =>
       api.post<Credit>(`/api/credits/${id}/${closed ? 'close' : 'reopen'}`, {}),
     onSuccess: () => invalidateCredits(qc),
+  })
+}
+
+// ── Геймификация: серия «день закрыт» (G1) ─────────────────────────────────
+export function useStreak() {
+  return useQuery({
+    queryKey: ['streak'] as const,
+    queryFn: () => api.get<Streak>('/api/streak'),
+  })
+}
+
+/** «Трат не было» — закрывает сегодняшний день без операции. */
+export function useCloseDay() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<Streak>('/api/day/close', {}),
+    onSuccess: (data) => qc.setQueryData(['streak'], data),
   })
 }
