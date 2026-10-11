@@ -1,6 +1,6 @@
 import { useCloseDay } from '../lib/queries'
 import { haptic } from '../lib/telegram'
-import type { Streak } from '../types'
+import type { Streak, Xp } from '../types'
 
 /** Русское «день / дня / дней» по числу. */
 export function daysWord(n: number): string {
@@ -15,7 +15,18 @@ export function daysWord(n: number): string {
  * «Финансовая серия»: сколько дней подряд ты вёл финансы. День закрыт, когда внесена любая
  * операция или нажато «Трат не было». Без стыда за пропуски — только позитив и мягкие напоминания.
  */
-export function StreakSheet({ streak, onClose }: { streak: Streak; onClose: () => void }) {
+export function StreakSheet({
+  streak,
+  xp,
+  levelUp = false,
+  onClose,
+}: {
+  streak: Streak
+  xp?: Xp
+  /** Уровень вырос с прошлого открытия — показываем поздравление. */
+  levelUp?: boolean
+  onClose: () => void
+}) {
   const close = useCloseDay()
 
   const closeDay = async () => {
@@ -31,6 +42,21 @@ export function StreakSheet({ streak, onClose }: { streak: Streak; onClose: () =
     <div className="scrim" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
+        {xp && (
+          <div className="lvl-box">
+            {levelUp && <div className="lvl-up">🎉 Новый уровень!</div>}
+            <div className="lvl-top">
+              <span className="lvl-badge">{xp.level}</span>
+              <span className="lvl-name">
+                <b>{xp.levelName}</b>
+                <small>{xp.xp} XP · +{xp.today} сегодня</small>
+              </span>
+            </div>
+            <div className="bar lvl-bar"><i style={{ width: `${xp.progress}%` }} /></div>
+            <div className="lvl-next">до уровня {xp.level + 1}: {xp.nextAt - xp.xp} XP</div>
+          </div>
+        )}
+
         <div className="stk-hero">
           <div className={`stk-flame${streak.current > 0 ? ' on' : ''}`}>🔥</div>
           <div key={streak.current} className="stk-num">{streak.current}</div>

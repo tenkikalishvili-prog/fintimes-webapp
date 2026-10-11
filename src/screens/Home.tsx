@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getUserName, haptic } from '../lib/telegram'
 import { compact, money, budgetStatus, fillClass, formatTxDate } from '../lib/format'
-import { useMe, useOverview, useStreak, useTransactions, useDeleteTransaction } from '../lib/queries'
+import { useMe, useOverview, useStreak, useTransactions, useDeleteTransaction, useXp } from '../lib/queries'
 import { StreakSheet } from '../components/StreakSheet'
 import { DayRingCard } from '../components/DayRingCard'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
@@ -32,6 +32,8 @@ export function Home() {
   const [filter, setFilter] = useState<Filter>('all')
   const [armed, setArmed] = useState<number | null>(null)
   const streak = useStreak()
+  const xp = useXp()
+  const [levelUp, setLevelUp] = useState(false)
   const [streakOpen, setStreakOpen] = useState(false)
   const name = me.data?.name?.split(' ')[0] || getUserName()
   const sign = CURRENCY_SIGN[me.data?.currency ?? 'RUB'] ?? '₽'
@@ -39,6 +41,24 @@ export function Home() {
   const shown = (tx.data ?? [])
     .filter((t) => (filter === 'all' ? true : t.article === filter))
     .slice(0, RECENT_LIMIT)
+
+  // Новый уровень: сравниваем с последним виденным (localStorage) — один раз открываем экран с поздравлением.
+  const openProgress = () => setStreakOpen(true)
+  useEffect(() => {
+    const lvl = xp.data?.level
+    if (!lvl) return
+    try {
+      const seen = Number(localStorage.getItem('ft-level') ?? '0')
+      if (seen > 0 && lvl > seen) {
+        haptic('heavy')
+        setLevelUp(true)
+        setStreakOpen(true)
+      }
+      localStorage.setItem('ft-level', String(lvl))
+    } catch {
+      /* localStorage недоступен — просто без поздравления */
+    }
+  }, [xp.data?.level])
 
   // «Можно потратить сегодня» = свободные деньги месяца ÷ оставшиеся дни (с учётом долгов).
   // Считаем из того же free, что и «Свободно за месяц» ниже, чтобы числа сходились.
@@ -53,10 +73,19 @@ export function Home() {
           <div className="mo">{data ? monthTitle(data.month) : ' '}</div>
         </div>
         <div className="hr">
+          {xp.data && (
+            <button
+              className="stk-chip lvl"
+              onClick={() => { haptic('light'); openProgress() }}
+              aria-label="Уровень"
+            >
+              Ур. {xp.data.level}
+            </button>
+          )}
           {streak.data && (
             <button
               className={`stk-chip${streak.data.current > 0 ? ' on' : ''}${streak.data.atRisk ? ' risk' : ''}`}
-              onClick={() => { haptic('light'); setStreakOpen(true) }}
+              onClick={() => { haptic('light'); openProgress() }}
               aria-label="Финансовая серия"
             >
               <span className="fl">🔥</span>
@@ -67,7 +96,7 @@ export function Home() {
         </div>
       </header>
       {streakOpen && streak.data && (
-        <StreakSheet streak={streak.data} onClose={() => setStreakOpen(false)} />
+        <StreakSheet streak={streak.data} xp={xp.data} levelUp={levelUp} onClose={() => { setStreakOpen(false); setLevelUp(false) }} />
       )}
 
       {isPending ? (

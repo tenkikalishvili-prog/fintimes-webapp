@@ -921,3 +921,17 @@ a{color:inherit;text-decoration:none}
 .ring-week i.now{box-shadow:0 0 0 2px var(--accent-dim);border-color:var(--accent)}
 .ring-week i.within.now{border-color:var(--ok)}
 .ring-week span{margin-left:6px;font-size:11px;color:var(--faint);font-weight:700;white-space:nowrap}
+
+/* ---------- Геймификация: XP и уровень (G3) ---------- */
+.stk-chip.lvl{color:var(--accent-soft);border-color:rgba(165,139,255,.35);font-size:12px}
+.lvl-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:2px 0 12px}
+.lvl-up{font-size:12.5px;font-weight:800;color:var(--yellow);margin-bottom:8px}
+.lvl-top{display:flex;align-items:center;gap:12px}
+.lvl-badge{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;flex:0 0 auto}
+.lvl-name{display:flex;flex-direction:column;line-height:1.25}
+.lvl-name b{font-size:15px;font-weight:800}
+.lvl-name small{font-size:11.5px;color:var(--muted);font-weight:600}
+.lvl-bar{height:7px;margin-top:11px}
+.lvl-bar>i{background:linear-gradient(90deg,var(--accent),var(--accent-soft))}
+.lvl-next{font-size:11px;color:var(--faint);font-weight:600;margin-top:6px}

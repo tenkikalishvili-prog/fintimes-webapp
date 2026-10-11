@@ -2,6 +2,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './api'
 import type {
+  Xp,
   DayRing,
   Streak,
   Analytics,
@@ -156,6 +157,7 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['goals'] })
   qc.invalidateQueries({ queryKey: ['streak'] })
   qc.invalidateQueries({ queryKey: ['day-ring'] })
+  qc.invalidateQueries({ queryKey: ['xp'] })
   qc.invalidateQueries({ queryKey: ['credits'] })
   qc.invalidateQueries({ queryKey: ['debts'] })
   qc.invalidateQueries({ queryKey: ['cashflow-plan'] })
@@ -628,7 +630,11 @@ export function useCloseDay() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api.post<Streak>('/api/day/close', {}),
-    onSuccess: (data) => qc.setQueryData(['streak'], data),
+    onSuccess: (data) => {
+      qc.setQueryData(['streak'], data)
+      qc.invalidateQueries({ queryKey: ['xp'] })
+      qc.invalidateQueries({ queryKey: ['day-ring'] })
+    },
   })
 }
 
@@ -637,5 +643,13 @@ export function useDayRing() {
   return useQuery({
     queryKey: ['day-ring'] as const,
     queryFn: () => api.get<DayRing>('/api/day-ring'),
+  })
+}
+
+// ── Геймификация: XP и уровень (G3) ────────────────────────────────────────
+export function useXp() {
+  return useQuery({
+    queryKey: ['xp'] as const,
+    queryFn: () => api.get<Xp>('/api/xp'),
   })
 }

@@ -577,3 +577,22 @@ export interface DayRing {
   /** Последние 7 дней, от старых к новым. */
   week: { day: string; state: WeekDayState }[]
 }
+
+// ── Геймификация: XP и уровень (G3) ────────────────────────────────────────
+export interface Xp {
+  /** Заработано всего. */
+  xp: number
+  /** Потрачено (заморозки). */
+  spent: number
+  /** Доступно для трат. */
+  balance: number
+  /** Заработано сегодня. */
+  today: number
+  level: number
+  levelName: string
+  /** XP, с которого начался текущий уровень / на котором наступит следующий. */
+  levelStart: number
+  nextAt: number
+  /** Прогресс внутри уровня, %. */
+  progress: number
+}
