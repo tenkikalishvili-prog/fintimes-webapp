@@ -12,6 +12,12 @@ import type {
   DebtPayment,
   DebtPaymentInput,
   DebtUpdateInput,
+  Credit,
+  CreditInput,
+  CreditRepayment,
+  CreditRepaymentInput,
+  CreditsData,
+  CreditUpdateInput,
   Goal,
   GoalContribution,
   GoalContributionInput,
@@ -58,6 +64,8 @@ export const keys = {
   debts: (includeClosed: boolean) => ['debts', includeClosed] as const,
   debtPayments: (debtId: number) => ['debt-payments', debtId] as const,
   goals: (includeDone: boolean) => ['goals', includeDone] as const,
+  credits: ['credits'] as const,
+  creditRepayments: (creditId: number) => ['credit-repayments', creditId] as const,
   goalContributions: (goalId: number) => ['goal-contributions', goalId] as const,
   bills: (month?: string) => ['bills', month ?? 'current'] as const,
   cashflow: ['cashflow-plan'] as const,
@@ -144,6 +152,7 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['transactions'] })
   qc.invalidateQueries({ queryKey: ['history'] })
   qc.invalidateQueries({ queryKey: ['goals'] })
+  qc.invalidateQueries({ queryKey: ['credits'] })
   qc.invalidateQueries({ queryKey: ['debts'] })
   qc.invalidateQueries({ queryKey: ['cashflow-plan'] })
 }
@@ -498,5 +507,89 @@ export function useRenameGroup() {
       invalidateMoney(qc)
       qc.invalidateQueries({ queryKey: ['categories'] })
     },
+  })
+}
+
+// ── Кредиты и досрочное погашение ──────────────────────────────────────────
+export function useCredits() {
+  return useQuery({
+    queryKey: keys.credits,
+    queryFn: () => api.get<CreditsData>('/api/credits'),
+  })
+}
+
+/** Карточка кредита изменилась (создание/правка/удаление/фонд) — обновляем «Кредиты» и деньги. */
+function invalidateCredits(qc: ReturnType<typeof useQueryClient>) {
+  invalidateMoney(qc)
+  qc.invalidateQueries({ queryKey: keys.credits })
+  qc.invalidateQueries({ queryKey: ['credit-repayments'] })
+}
+
+export function useSetCreditFund() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (fund: number) => api.patch<CreditsData>('/api/credits/fund', { fund }),
+    onSuccess: () => invalidateCredits(qc),
+  })
+}
+
+export function useCreateCredit() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreditInput) => api.post<Credit>('/api/credits', body),
+    onSuccess: () => invalidateCredits(qc),
+  })
+}
+
+export function useUpdateCredit() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: CreditUpdateInput }) =>
+      api.patch<Credit>(`/api/credits/${id}`, body),
+    onSuccess: () => invalidateCredits(qc),
+  })
+}
+
+export function useDeleteCredit() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.del<void>(`/api/credits/${id}`),
+    onSuccess: () => invalidateCredits(qc),
+  })
+}
+
+/** История досрочных погашений одного кредита (свежие сверху). */
+export function useCreditRepayments(creditId: number) {
+  return useQuery({
+    queryKey: keys.creditRepayments(creditId),
+    queryFn: () => api.get<CreditRepayment[]>(`/api/credits/${creditId}/repayments`),
+  })
+}
+
+export function useAddCreditRepayment(creditId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreditRepaymentInput) =>
+      api.post<Credit>(`/api/credits/${creditId}/repayments`, body),
+    onSuccess: () => invalidateCredits(qc),
+  })
+}
+
+export function useDeleteCreditRepayment(creditId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (repaymentId: number) =>
+      api.del<Credit>(`/api/credits/${creditId}/repayments/${repaymentId}`),
+    onSuccess: () => invalidateCredits(qc),
+  })
+}
+
+/** Галочка «погашен полностью» (вносит остаток) и её снятие (сбрасывает факт). */
+export function useSetCreditClosed() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, closed }: { id: number; closed: boolean }) =>
+      api.post<Credit>(`/api/credits/${id}/${closed ? 'close' : 'reopen'}`, {}),
+    onSuccess: () => invalidateCredits(qc),
   })
 }

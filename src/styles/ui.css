@@ -786,3 +786,51 @@ a{color:inherit;text-decoration:none}
 .ovd-title{font-size:14.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ovd-meta{font-size:12px;color:var(--over);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ovd-amt{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ---------- Кредиты (экран «Кредиты») ---------- */
+.qi{min-width:0}
+.cr-fund{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.cr-fund-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cr-cap{font-size:12px;color:var(--muted);font-weight:700}
+.cr-mini{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--accent-soft);background:var(--card2);
+  border:1px solid var(--line);border-radius:10px;padding:6px 12px;cursor:pointer}
+.cr-fund-amt{font-size:28px;font-weight:800;letter-spacing:-.5px;color:var(--yellow);margin-top:4px;font-variant-numeric:tabular-nums}
+.cr-fund-edit{display:flex;gap:8px;margin-top:8px}
+.cr-fund-edit .input{flex:1;min-width:0}
+.cr-fund-edit .cr-save{flex:0 0 auto;width:auto;padding:0 16px}
+.cr-sub{font-size:11.5px;color:var(--faint);font-weight:600;margin-top:2px}
+.cr-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.cr-card{display:flex;flex-direction:column;gap:2px;min-width:0;background:var(--card);border:1px solid var(--line);
+  border-radius:18px;padding:12px}
+.cr-big{font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cr-big.ok{color:var(--ok)}
+.cr-listhead{position:relative;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cr-listhead b{font-size:14px;color:var(--text)}
+.cr-count{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:700}
+.cr-filter{width:30px;height:30px;border-radius:10px;background:var(--card);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;color:var(--accent-soft);cursor:pointer}
+.cr-filter.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.cr-menu{position:absolute;right:0;top:38px;z-index:20;width:214px;background:var(--card2);border:1px solid var(--line);
+  border-radius:14px;padding:6px;box-shadow:var(--sh-pop)}
+.cr-menu-g{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:7px 10px 3px;font-weight:700}
+.cr-menu-o{display:flex;justify-content:space-between;width:100%;text-align:left;font-size:12.5px;font-weight:600;
+  color:var(--text);background:none;border:none;padding:8px 10px;border-radius:9px;cursor:pointer}
+.cr-menu-o.on{background:var(--accent-dim);color:var(--accent-soft)}
+.cr-list{display:flex;flex-direction:column;gap:10px}
+.cr-loan{position:relative;overflow:hidden;width:100%;text-align:left;background:var(--card);
+  border:1px solid var(--line);border-radius:16px;padding:12px 12px 12px 17px;cursor:pointer;color:var(--text)}
+.cr-loan::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent)}
+.cr-loan.card::before{background:var(--c6)}
+.cr-loan.closed{opacity:.6}
+.cr-row{display:flex;align-items:center;gap:10px}
+.cr-nm{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.cr-nm b{font-size:14.5px;font-weight:700}
+.cr-nm small{font-size:11.5px;color:var(--muted);font-weight:600}
+.cr-kind{align-self:flex-start;font-size:10.5px;font-weight:800;border-radius:7px;padding:1px 8px;margin-bottom:3px;
+  color:var(--accent-soft);background:var(--accent-dim)}
+.cr-loan.card .cr-kind{color:var(--c6);background:rgba(77,208,196,.16)}
+.cr-amt{margin-left:auto;text-align:right;font-size:15px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cr-amt small{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.cr-done{margin-top:7px;font-size:11.5px;font-weight:700;color:var(--ok)}
+
+@media (max-width:370px){.qi{font-size:9.5px}}

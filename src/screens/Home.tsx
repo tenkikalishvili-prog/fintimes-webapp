@@ -87,6 +87,9 @@ export function Home() {
             <button className="qi" onClick={() => { haptic('light'); navigate('/goals') }}>
               <span className="qic">🎯</span>Цели
             </button>
+            <button className="qi" onClick={() => { haptic('light'); navigate('/credits') }}>
+              <span className="qic">💳</span>Кредиты
+            </button>
             <button className="qi" onClick={() => { haptic('light'); navigate('/settings') }}>
               <span className="qic">🔔</span>Уведомления
             </button>

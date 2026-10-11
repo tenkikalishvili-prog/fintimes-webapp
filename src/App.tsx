@@ -8,6 +8,7 @@ import { EditTransaction } from './screens/EditTransaction'
 import { History } from './screens/History'
 import { Debts } from './screens/Debts'
 import { Goals } from './screens/Goals'
+import { Credits } from './screens/Credits'
 import { Payments } from './screens/Payments'
 import { Settings } from './screens/Settings'
 import { Onboarding } from './screens/Onboarding'
@@ -38,6 +39,7 @@ export default function App() {
       <Route path="/history" element={<History />} />
       <Route path="/debts" element={<Debts />} />
       <Route path="/goals" element={<Goals />} />
+      <Route path="/credits" element={<Credits />} />
       <Route path="/payments" element={<Payments />} />
       <Route path="/edit/:id" element={<EditTransaction />} />
     </Routes>

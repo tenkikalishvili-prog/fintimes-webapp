@@ -476,3 +476,66 @@ export interface CashflowPlan {
   /** Просрочка прошлых месяцев — отдельным блоком (не в половинах). */
   overdue: CashflowItem[]
 }
+
+// ── Кредиты и досрочное погашение ──────────────────────────────────────────
+/** Тип: обычный кредит или кредитная карта. */
+export type CreditKind = 'credit' | 'card'
+
+/** Банковский кредит / кредитка. Факт досрочки — `paid`; закрыт, когда `paid ≥ amount`. */
+export interface Credit {
+  id: number
+  kind: CreditKind
+  bank: string
+  /** Тело кредита, ₽. */
+  amount: number
+  /** Погашено досрочно (факт), ₽. */
+  paid: number
+  /** Остаток тела = amount − paid, ₽. */
+  remaining: number
+  /** Обычный ежемесячный платёж, ₽ (высвобождается, когда кредит закрыт). */
+  monthlyPayment: number
+  note: string | null
+  isClosed: boolean
+}
+
+/** Экран «Кредиты»: фонд, сводка и все кредиты. */
+export interface CreditsData {
+  /** Фонд досрочного погашения (рекомендуемая сумма), ₽. */
+  fund: number
+  /** Сумма остатков по всем кредитам, ₽. */
+  totalDebt: number
+  /** Платежи закрытых кредитов, ₽/мес. */
+  freedPayments: number
+  /** Факт досрочки по всем кредитам, ₽. */
+  paidTotal: number
+  items: Credit[]
+}
+
+export interface CreditInput {
+  kind: CreditKind
+  bank: string
+  amount: number
+  monthlyPayment: number
+  note?: string
+}
+
+export interface CreditUpdateInput {
+  kind?: CreditKind
+  bank?: string
+  amount?: number
+  monthlyPayment?: number
+  note?: string
+}
+
+/** Одно досрочное погашение кредита. */
+export interface CreditRepayment {
+  id: number
+  amount: number
+  /** ISO YYYY-MM-DD. */
+  date: string
+}
+
+export interface CreditRepaymentInput {
+  amount: number
+  date?: string
+}
