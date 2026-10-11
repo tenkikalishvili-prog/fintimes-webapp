@@ -653,3 +653,15 @@ export function useXp() {
     queryFn: () => api.get<Xp>('/api/xp'),
   })
 }
+
+/** Покупка заморозки серии за XP (G4). */
+export function useBuyFreeze() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<Streak>('/api/streak/freeze', {}),
+    onSuccess: (data) => {
+      qc.setQueryData(['streak'], data)
+      qc.invalidateQueries({ queryKey: ['xp'] })
+    },
+  })
+}

@@ -554,6 +554,12 @@ export interface Streak {
   atRisk: boolean
   /** Локальная дата пользователя, ISO YYYY-MM-DD. */
   today: string
+  /** Заморозок сейчас / максимум / цена одной в XP. */
+  freezes: number
+  maxFreezes: number
+  freezeCost: number
+  /** Вчера серию спасла заморозка. */
+  frozenYesterday: boolean
 }
 
 // ── Геймификация: кольцо дня (G2) ──────────────────────────────────────────

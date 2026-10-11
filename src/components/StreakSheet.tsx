@@ -1,4 +1,5 @@
-import { useCloseDay } from '../lib/queries'
+import { useState } from 'react'
+import { useBuyFreeze, useCloseDay } from '../lib/queries'
 import { haptic } from '../lib/telegram'
 import type { Streak, Xp } from '../types'
 
@@ -28,6 +29,21 @@ export function StreakSheet({
   onClose: () => void
 }) {
   const close = useCloseDay()
+  const buy = useBuyFreeze()
+  const [armed, setArmed] = useState(false) // покупка — в два тапа
+  const canBuy = streak.freezes < streak.maxFreezes && (xp?.balance ?? 0) >= streak.freezeCost
+
+  const buyFreeze = async () => {
+    if (!armed) { setArmed(true); haptic('light'); return }
+    try {
+      await buy.mutateAsync()
+      haptic('medium')
+    } catch {
+      /* недостаточно XP или максимум — кнопка и так заблокирована */
+    } finally {
+      setArmed(false)
+    }
+  }
 
   const closeDay = async () => {
     try {
@@ -74,6 +90,31 @@ export function StreakSheet({
           <b className={streak.closedToday ? 'ok' : ''}>
             {streak.closedToday ? '✓ день закрыт' : 'ещё не закрыт'}
           </b>
+        </div>
+
+        {streak.frozenYesterday && (
+          <div className="frz-note">🧊 Вчера заморозка сохранила твою серию</div>
+        )}
+
+        <div className="frz-box">
+          <div className="frz-top">
+            <span className="frz-ic">🧊</span>
+            <span className="frz-tx">
+              <b>Заморозки серии: {streak.freezes} из {streak.maxFreezes}</b>
+              <small>Если пропустишь день, заморозка сохранит серию сама</small>
+            </span>
+          </div>
+          <button
+            className={`btn btn-secondary frz-buy${armed ? ' armed' : ''}`}
+            disabled={!canBuy || buy.isPending}
+            onClick={buyFreeze}
+          >
+            {streak.freezes >= streak.maxFreezes
+              ? 'Максимум заморозок'
+              : armed
+                ? `Подтвердить: −${streak.freezeCost} XP`
+                : `Купить за ${streak.freezeCost} XP${(xp?.balance ?? 0) < streak.freezeCost ? ` · у тебя ${xp?.balance ?? 0}` : ''}`}
+          </button>
         </div>
 
         <p className="stk-hint">
