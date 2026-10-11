@@ -2,6 +2,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './api'
 import type {
+  DayRing,
   Streak,
   Analytics,
   Article,
@@ -154,6 +155,7 @@ function invalidateMoney(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['history'] })
   qc.invalidateQueries({ queryKey: ['goals'] })
   qc.invalidateQueries({ queryKey: ['streak'] })
+  qc.invalidateQueries({ queryKey: ['day-ring'] })
   qc.invalidateQueries({ queryKey: ['credits'] })
   qc.invalidateQueries({ queryKey: ['debts'] })
   qc.invalidateQueries({ queryKey: ['cashflow-plan'] })
@@ -627,5 +629,13 @@ export function useCloseDay() {
   return useMutation({
     mutationFn: () => api.post<Streak>('/api/day/close', {}),
     onSuccess: (data) => qc.setQueryData(['streak'], data),
+  })
+}
+
+// ── Геймификация: кольцо дня (G2) ──────────────────────────────────────────
+export function useDayRing() {
+  return useQuery({
+    queryKey: ['day-ring'] as const,
+    queryFn: () => api.get<DayRing>('/api/day-ring'),
   })
 }

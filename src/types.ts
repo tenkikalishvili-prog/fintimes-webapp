@@ -555,3 +555,25 @@ export interface Streak {
   /** Локальная дата пользователя, ISO YYYY-MM-DD. */
   today: string
 }
+
+// ── Геймификация: кольцо дня (G2) ──────────────────────────────────────────
+export type WeekDayState = 'within' | 'over' | 'open'
+
+export interface DayRing {
+  /** Задан ли бюджет группы «Траты» (без него кольцо не строится). */
+  hasBudget: boolean
+  today: string
+  /** Потрачено сегодня по группе «Траты», ₽. */
+  todaySpent: number
+  /** Дневной ориентир = бюджет «Трат» ÷ дней в месяце, ₽. */
+  dailyTarget: number
+  status: 'good' | 'medium' | 'bad'
+  /** Доля ориентира, % (может быть больше 100). */
+  pct: number
+  /** Закрытых дней в этом месяце. */
+  daysClosed: number
+  /** Из них «в рамках» ориентира. */
+  daysWithin: number
+  /** Последние 7 дней, от старых к новым. */
+  week: { day: string; state: WeekDayState }[]
+}

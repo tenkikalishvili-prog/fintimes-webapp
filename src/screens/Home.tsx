@@ -4,6 +4,7 @@ import { getUserName, haptic } from '../lib/telegram'
 import { compact, money, budgetStatus, fillClass, formatTxDate } from '../lib/format'
 import { useMe, useOverview, useStreak, useTransactions, useDeleteTransaction } from '../lib/queries'
 import { StreakSheet } from '../components/StreakSheet'
+import { DayRingCard } from '../components/DayRingCard'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
 import type { Article } from '../types'
 
@@ -93,6 +94,8 @@ export function Home() {
               <span style={{ textAlign: 'right' }}><span className="k">Дней</span><br /><b>{data.daysLeft}</b></span>
             </div>
           </div>
+
+          <DayRingCard closedToday={streak.data?.closedToday ?? false} />
 
           {/* Быстрые действия */}
           <div className="qa">

@@ -891,3 +891,33 @@ a{color:inherit;text-decoration:none}
 .stk-row b{color:var(--text);font-weight:800}
 .stk-row b.ok{color:var(--ok)}
 .stk-hint{font-size:12px;color:var(--faint);line-height:1.5;margin:10px 2px 14px}
+
+/* ---------- Геймификация: кольцо дня (G2) ---------- */
+.ring-card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);
+  border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:14px;color:var(--text)}
+.ring-card.empty{cursor:pointer;gap:12px}
+.ring-empty-ic{width:44px;height:44px;border-radius:50%;border:2px dashed var(--line);display:flex;align-items:center;
+  justify-content:center;color:var(--faint);font-size:20px;flex:0 0 auto}
+.ring-empty-tx{display:flex;flex-direction:column;min-width:0}
+.ring-empty-tx b{font-size:13.5px}
+.ring-empty-tx small{font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:2px}
+.ring-svg{position:relative;width:64px;height:64px;flex:0 0 auto}
+.ring-track{fill:none;stroke:var(--card2);stroke-width:7}
+.ring-bar{fill:none;stroke:var(--ok);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .6s ease,stroke .3s}
+.ring-card.warn .ring-bar{stroke:var(--warn)}
+.ring-card.over .ring-bar{stroke:var(--over)}
+.ring-card.closed{border-color:rgba(70,213,133,.45);box-shadow:0 0 0 1px rgba(70,213,133,.25) inset}
+.ring-mid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;
+  font-variant-numeric:tabular-nums}
+.ring-card.closed .ring-mid{color:var(--ok);font-size:20px}
+.ring-info{flex:1;min-width:0}
+.ring-ttl{font-size:13.5px;font-weight:800}
+.ring-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.ring-sub b{color:var(--text);font-weight:800}
+.ring-week{display:flex;align-items:center;gap:5px;margin-top:8px}
+.ring-week i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--line);background:transparent;flex:0 0 auto}
+.ring-week i.within{background:var(--ok);border-color:var(--ok)}
+.ring-week i.over{background:var(--over);border-color:var(--over)}
+.ring-week i.now{box-shadow:0 0 0 2px var(--accent-dim);border-color:var(--accent)}
+.ring-week i.within.now{border-color:var(--ok)}
+.ring-week span{margin-left:6px;font-size:11px;color:var(--faint);font-weight:700;white-space:nowrap}
