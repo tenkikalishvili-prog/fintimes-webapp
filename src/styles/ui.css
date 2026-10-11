@@ -782,7 +782,7 @@ a{color:inherit;text-decoration:none}
 .ovd-check:disabled{opacity:.5;cursor:default}
 .ovd-em{width:34px;height:34px;flex:0 0 auto;border-radius:10px;background:var(--card);
   display:flex;align-items:center;justify-content:center;font-size:16px}
-.ovd-mid{flex:1;min-width:0}
+.ovd-mid{flex:1;min-width:0;display:flex;flex-direction:column}
 .ovd-title{font-size:14.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ovd-meta{font-size:12px;color:var(--over);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ovd-amt{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -834,3 +834,36 @@ a{color:inherit;text-decoration:none}
 .cr-done{margin-top:7px;font-size:11.5px;font-weight:700;color:var(--ok)}
 
 @media (max-width:370px){.qi{font-size:9.5px}}
+
+/* ---------- «Платежи»: разделители блоков, чек-боксы в плитках, досрочка ---------- */
+.pay-div{display:flex;align-items:center;gap:10px;margin:6px 0 12px;font-size:10.5px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--accent-soft);white-space:nowrap}
+.pay-div::before{content:"";flex:0 0 10px;height:1px;background:var(--line)}
+.pay-div::after{content:"";flex:1;height:1px;background:var(--line)}
+.pay-div em{font-style:normal;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:700}
+.pay-empty{padding:14px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.pay-empty p{margin:0 0 10px}
+.pay-empty p:last-child{margin:0}
+.pay-blk-head{display:flex;justify-content:space-between;padding:8px 8px 4px;font-size:12px;font-weight:700;color:var(--muted)}
+.pay-blk-head b{color:var(--text)}
+.cfv-row .bill-check{width:24px;height:24px;font-size:13px}
+.cfv-tap{flex:1;min-width:0;display:flex;align-items:center;gap:9px;background:none;border:none;
+  padding:0;text-align:left;color:inherit;cursor:pointer}
+.bill-check.armed{border-color:var(--over);background:var(--over-dim)}
+.cr-kind.card{color:var(--c6);background:rgba(77,208,196,.16)}
+.bill-title .cr-kind{margin:0 6px 0 0;vertical-align:1px}
+.pp-fund{display:flex;justify-content:space-between;align-items:center;background:var(--card);
+  border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:12px}
+.pp-cap{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.pp-big{display:block;font-size:20px;font-weight:800;letter-spacing:-.3px;color:var(--text);font-variant-numeric:tabular-nums}
+.pp-big.y{color:var(--yellow);font-size:22px}
+.pp-big.ok{color:var(--ok)}
+.pp-r{text-align:right}
+.pp-fact{text-align:right;font-size:14px;font-weight:800;white-space:nowrap;color:var(--text);font-variant-numeric:tabular-nums}
+.pp-fact small{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.bill-row.paid .pp-fact{color:var(--ok)}
+.cr-info{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.cr-info div{background:var(--card2);border-radius:12px;padding:8px 9px}
+.cr-info span{display:block;font-size:10px;color:var(--muted);font-weight:700}
+.cr-info b{font-size:13px;font-weight:800}
+.cr-info b.ok{color:var(--ok)}

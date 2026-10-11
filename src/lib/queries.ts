@@ -64,7 +64,7 @@ export const keys = {
   debts: (includeClosed: boolean) => ['debts', includeClosed] as const,
   debtPayments: (debtId: number) => ['debt-payments', debtId] as const,
   goals: (includeDone: boolean) => ['goals', includeDone] as const,
-  credits: ['credits'] as const,
+  credits: (month?: string) => ['credits', month ?? 'current'] as const,
   creditRepayments: (creditId: number) => ['credit-repayments', creditId] as const,
   goalContributions: (goalId: number) => ['goal-contributions', goalId] as const,
   bills: (month?: string) => ['bills', month ?? 'current'] as const,
@@ -251,6 +251,23 @@ export function useDeleteDebtPayment(debtId: number) {
   return useMutation({
     mutationFn: (paymentId: number) => api.del<Debt>(`/api/debts/${debtId}/payments/${paymentId}`),
     onSuccess: () => invalidateDebtPayments(qc, debtId),
+  })
+}
+
+/**
+ * Галочка «оплачен» у долга на экране «Платежи»: ставим — вносим возврат на указанную сумму
+ * (остаток), снимаем — удаляем последний возврат (тот, что мог закрыть долг).
+ */
+export function useSetDebtPaid() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, paid, amount }: { id: number; paid: boolean; amount: number }) => {
+      if (paid) return api.post<Debt>(`/api/debts/${id}/payments`, { amount })
+      const list = await api.get<DebtPayment[]>(`/api/debts/${id}/payments`)
+      if (list.length === 0) return undefined
+      return api.del<Debt>(`/api/debts/${id}/payments/${list[0].id}`)
+    },
+    onSuccess: (_d, v) => invalidateDebtPayments(qc, v.id),
   })
 }
 
@@ -511,17 +528,17 @@ export function useRenameGroup() {
 }
 
 // ── Кредиты и досрочное погашение ──────────────────────────────────────────
-export function useCredits() {
+export function useCredits(month?: string) {
   return useQuery({
-    queryKey: keys.credits,
-    queryFn: () => api.get<CreditsData>('/api/credits'),
+    queryKey: keys.credits(month),
+    queryFn: () => api.get<CreditsData>(`/api/credits${qs({ month })}`),
   })
 }
 
 /** Карточка кредита изменилась (создание/правка/удаление/фонд) — обновляем «Кредиты» и деньги. */
 function invalidateCredits(qc: ReturnType<typeof useQueryClient>) {
   invalidateMoney(qc)
-  qc.invalidateQueries({ queryKey: keys.credits })
+  qc.invalidateQueries({ queryKey: ['credits'] })
   qc.invalidateQueries({ queryKey: ['credit-repayments'] })
 }
 

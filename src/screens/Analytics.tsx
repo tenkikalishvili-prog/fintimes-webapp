@@ -11,20 +11,14 @@ import {
 import {
   useAnalytics,
   useBudgetOverview,
-  useCashflowPlan,
   useOverview,
-  useUpdateBill,
-  useUpdateDebt,
 } from '../lib/queries'
 import { haptic } from '../lib/telegram'
 import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
-import { OverdueBlock } from '../components/OverdueBlock'
 import type {
   Article,
   AnalyticsSlice,
   BudgetGroupView,
-  CashflowItem,
-  CashflowSegment,
   Overview,
 } from '../types'
 
@@ -51,7 +45,7 @@ export function Analytics() {
         <div className="mo">Аналитика</div>
       </header>
 
-      {/* ① Единый степпер месяца — управляет всем экраном (календарь + сводка + структура) */}
+      {/* ① Единый степпер месяца — управляет всем экраном (сводка + структура + план/факт) */}
       <div className="hist-period">
         <button className="hp-nav" onClick={() => { haptic('light'); setMonth(shiftMonth(month, -1)) }} aria-label="Раньше">
           ‹
@@ -96,181 +90,9 @@ export function Analytics() {
         <StructureBlock total={analytics.data.total} slices={analytics.data.slices} article={article} />
       )}
 
-      {/* ⓪ Платёжный календарь — перенесён под структуру трат (донат) */}
-      <CashflowPlanBlock month={month} />
-
       {/* ④ План vs факт (расходы) */}
       {budget.data && <BudgetVsFact groups={budget.data} />}
     </>
-  )
-}
-
-// ── Платёжный календарь V2 (S16.1): две плитки-половины месяца ─────────────
-function CashflowPlanBlock({ month }: { month: string }) {
-  const plan = useCashflowPlan(month)
-
-  return (
-    <div className="cfv-wrap">
-      {plan.isPending ? (
-        <SkeletonBlock rows={2} />
-      ) : plan.isError ? (
-        <div className="block"><ErrorState onRetry={plan.refetch} /></div>
-      ) : (
-        <>
-          <OverdueBlock items={plan.data.overdue} />
-          {plan.data.segments.map((seg) => <CashflowTile key={seg.index} seg={seg} />)}
-        </>
-      )}
-    </div>
-  )
-}
-
-function CashflowTile({ seg }: { seg: CashflowSegment }) {
-  // Обе плитки свёрнуты по умолчанию — раскрываются по тапу.
-  const [open, setOpen] = useState(false)
-  const restPos = seg.coverage >= 0
-  const emptyBoth = seg.incomes.length === 0 && seg.items.length === 0
-  // Прогресс оплаты: показываем, только когда что-то уже оплачено в половине.
-  const paid = seg.paidAmount
-  const leftToPay = Math.max(0, seg.obligations - paid)
-  const showProgress = paid > 0
-  const allPaid = paid > 0 && leftToPay === 0
-
-  return (
-    <div className={`cfv-tile${open ? ' open' : ''}`}>
-      <button className="cfv-top" onClick={() => { haptic('light'); setOpen(!open) }}>
-        <div className="cfv-h">
-          <span className="cfv-ic">{seg.index === 1 ? '💸' : '📆'}</span>
-          <span className="cfv-tt">
-            <b>{seg.label}</b>
-            <small>{seg.index === 1 ? '1–15 числа' : 'с 16 числа'}</small>
-          </span>
-          <span className="cfv-chev">▾</span>
-        </div>
-        <div className="cfv-kpis">
-          <div className="cfv-kpi">
-            <div className="cfv-k">Придёт</div>
-            <div className="cfv-v inc">{compact(seg.expectedIncome)}</div>
-          </div>
-          <div className="cfv-kpi">
-            <div className="cfv-k">К оплате</div>
-            <div className="cfv-v">{compact(seg.obligations)}</div>
-          </div>
-          <div className={`cfv-kpi rest ${restPos ? 'pos' : 'neg'}`}>
-            <div className="cfv-k">Останется</div>
-            <div className="cfv-v">{restPos ? '' : '−'}{compact(Math.abs(seg.coverage))}</div>
-          </div>
-        </div>
-      </button>
-
-      <div className="cfv-status">
-        <span className={`cfv-pill ${restPos ? 'ok' : 'over'}`}>
-          {restPos ? '✓ хватает' : `не хватает ${compact(Math.abs(seg.coverage))}`}
-        </span>
-        {showProgress && (
-          <span className={`cfv-prog${allPaid ? ' done' : ''}`}>
-            {allPaid
-              ? `✓ оплачено ${compact(paid)}`
-              : `оплачено ${compact(paid)} из ${compact(seg.obligations)} · осталось ${compact(leftToPay)}`}
-          </span>
-        )}
-      </div>
-
-      {open && (
-        <div className="cfv-body">
-          {emptyBoth ? (
-            <p className="cfv-empty">Ни доходов, ни платежей в этой половине</p>
-          ) : (
-            <>
-              {seg.incomes.length > 0 && (
-                <>
-                  <div className="cfv-sec">Поступления</div>
-                  <div className="cfv-rows">
-                    {seg.incomes.map((i, idx) => (
-                      <div className="cfv-row inc" key={`inc-${idx}`}>
-                        <span className="cfv-em">{i.emoji ?? '💰'}</span>
-                        <span className="cfv-nm"><b>{i.name}</b><small>{i.day} числа</small></span>
-                        <span className="cfv-amt">+{money(i.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-              <div className="cfv-sec">К оплате</div>
-              {seg.items.length === 0 ? (
-                <p className="cfv-empty">Платежей нет</p>
-              ) : (
-                <div className="cfv-rows">
-                  {seg.items.map((it) => (
-                    <CashflowRow
-                      key={`${it.kind}-${it.id}`}
-                      item={it}
-                      toSegment={seg.index === 1 ? 2 : 1}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function CashflowRow({ item, toSegment }: { item: CashflowItem; toSegment: number }) {
-  const [armed, setArmed] = useState(false)
-  const updateBill = useUpdateBill()
-  const updateDebt = useUpdateDebt()
-  const pending = updateBill.isPending || updateDebt.isPending
-
-  const move = async () => {
-    if (!armed) { setArmed(true); haptic('light'); return }
-    try {
-      if (item.kind === 'bill') {
-        await updateBill.mutateAsync({ id: item.id, body: { segmentOverride: toSegment } })
-      } else {
-        await updateDebt.mutateAsync({ id: item.id, body: { segmentOverride: toSegment } })
-      }
-      haptic('medium')
-    } catch {
-      setArmed(false)
-    }
-  }
-
-  return (
-    <div className={`cfv-row${item.paid ? ' paid' : ''}`}>
-      <span className="cfv-em">{item.emoji ?? (item.kind === 'debt' ? '🤝' : '📄')}</span>
-      <span className="cfv-nm">
-        <span className="cfv-nm-h">
-          {item.overdue && <span className="cfv-od" aria-label="Просрочен" title="Просрочен">⚠️</span>}
-          <b>
-            {item.title}
-            {item.overridden && !item.overdue && !item.paid && <span className="cfv-badge">перенесён</span>}
-          </b>
-        </span>
-        <small>
-          {item.paid
-            ? `до ${item.day} числа · ${item.kind === 'debt' ? 'возвращён' : 'оплачено'}`
-            : item.kind === 'debt' && item.paidAmount > 0
-              ? `возвращено ${money(item.paidAmount)} из ${money(item.amount)}`
-              : item.overdue && item.originLabel ? item.originLabel : `до ${item.day} числа`}
-        </small>
-      </span>
-      <span className="cfv-amt">{money(item.amount)}</span>
-      {item.paid ? (
-        <span className="cfv-check" aria-label="Оплачено" title="Оплачено">✓</span>
-      ) : (
-      <button
-        className={`cfv-mv${armed ? ' armed' : ''}`}
-        disabled={pending}
-        onClick={move}
-        aria-label="Перенести в другую половину"
-      >
-        {armed ? (toSegment === 2 ? 'во 2-ю?' : 'в 1-ю?') : '⇄'}
-      </button>
-      )}
-    </div>
   )
 }
 

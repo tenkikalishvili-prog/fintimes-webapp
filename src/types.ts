@@ -508,6 +508,8 @@ export interface CreditsData {
   freedPayments: number
   /** Факт досрочки по всем кредитам, ₽. */
   paidTotal: number
+  /** Досрочка, внесённая в выбранном месяце, ₽. */
+  monthPaid: number
   items: Credit[]
 }
 

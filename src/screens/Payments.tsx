@@ -5,61 +5,67 @@ import {
   useCashflowPlan,
   useCategories,
   useCreateBill,
+  useCredits,
   useDeleteBill,
   useSetBillPaid,
+  useSetCreditClosed,
+  useSetDebtPaid,
   useUpdateBill,
 } from '../lib/queries'
-import { SkeletonBlock, ErrorState, EmptyState } from '../components/States'
+import { SkeletonBlock, ErrorState } from '../components/States'
 import { OverdueBlock } from '../components/OverdueBlock'
+import { PaymentTile } from '../components/PaymentTiles'
+import { CreditRepaymentSheet } from '../components/CreditRepaymentSheet'
 import { ApiError } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { money, compact, monthTitle, currentMonth, shiftMonth, onlyDigits, groupDigits } from '../lib/format'
-import type { Bill, BillInput, BillUpdateInput } from '../types'
+import type { Bill, BillInput, BillUpdateInput, CashflowItem, Credit } from '../types'
 
-/** Раздел «Платежи» (направление C, S10): календарь обязательных платежей по месяцам. */
+/**
+ * Раздел «Платежи»: три блока под кнопкой «＋ Платёж».
+ *  1. «Обязательные платежи» — плитки «до 15-го» / «до конца месяца» (перенесены из «Аналитики»)
+ *     с чек-боксами оплаты внутри;
+ *  2. «Долги» — отдельный список с чек-боксом оплаты (в плитках долгов нет);
+ *  3. «Досрочное погашение кредитов» — рекомендуемая сумма (фонд), факт и список кредитов.
+ * «Осталось оплатить» = неоплаченные платежи + долги + просрочка. Досрочка сюда НЕ входит.
+ */
 export function Payments() {
   const navigate = useNavigate()
   const [month, setMonth] = useState(currentMonth())
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Bill | null>(null)
 
-  const { data, isPending, isError, refetch } = useBills(month)
+  const billsQ = useBills(month)
   const plan = useCashflowPlan(month)
   const setPaid = useSetBillPaid()
+  const setDebtPaid = useSetDebtPaid()
 
-  const bills = useMemo(() => data ?? [], [data])
-  const total = useMemo(() => bills.reduce((s, b) => s + b.amount, 0), [bills])
-  const paidSum = useMemo(
-    () => bills.filter((b) => b.paid).reduce((s, b) => s + b.amount, 0),
-    [bills],
-  )
-  const paidCount = bills.filter((b) => b.paid).length
-  const remaining = Math.max(0, total - paidSum)
+  const bills = useMemo(() => billsQ.data ?? [], [billsQ.data])
+  const segments = plan.data?.segments ?? []
+  const overdueItems = useMemo(() => plan.data?.overdue ?? [], [plan.data])
 
-  // Просрочка прошлых месяцев — только платежи (долги живут в разделе «Долги»).
-  const overdueBills = useMemo(
-    () => (plan.data?.overdue ?? []).filter((o) => o.kind === 'bill'),
-    [plan.data],
+  // Все обязательства месяца (платежи + долги): считаем «Осталось оплатить» и прогресс.
+  const monthItems = useMemo(() => segments.flatMap((s) => s.items), [segments])
+  const debtItems = useMemo(() => monthItems.filter((it) => it.kind === 'debt'), [monthItems])
+  const total = monthItems.reduce((s, it) => s + it.amount, 0)
+  const paidSum = monthItems.reduce(
+    (s, it) => s + (it.paid ? it.amount : it.kind === 'debt' ? it.paidAmount : 0),
+    0,
   )
-  const overdueSum = useMemo(() => overdueBills.reduce((s, o) => s + o.amount, 0), [overdueBills])
-  const payOverdue = (it: (typeof overdueBills)[number]) => {
+  const paidCount = monthItems.filter((it) => it.paid).length
+  const overdueSum = overdueItems.reduce((s, o) => s + o.amount, 0)
+  const remaining = Math.max(0, total - paidSum) + overdueSum
+
+  const payOverdue = (it: CashflowItem) => {
     if (!it.originPeriod) return
     haptic('medium')
-    setPaid.mutate({ id: it.id, month: it.originPeriod, paid: true })
+    if (it.kind === 'debt') setDebtPaid.mutate({ id: it.id, paid: true, amount: it.amount })
+    else setPaid.mutate({ id: it.id, month: it.originPeriod, paid: true })
   }
 
-  const cur = currentMonth()
-  const todayDay = new Date().getDate()
-  const isOverdue = (b: Bill): boolean => {
-    if (b.paid) return false
-    if (month < cur) return true // прошлый месяц и не оплачено
-    if (month === cur) return b.dueDay < todayDay
-    return false // будущий месяц
-  }
-
-  const toggle = (b: Bill) => {
-    haptic('medium')
-    setPaid.mutate({ id: b.id, month, paid: !b.paid })
+  const editBill = (id: number) => {
+    const b = bills.find((x) => x.id === id)
+    if (b) setEditing(b)
   }
 
   return (
@@ -86,7 +92,7 @@ export function Payments() {
         {/* Сводка месяца — сумма включает просрочку, ниже разбивка */}
         <div className={`pay-sum${overdueSum > 0 ? ' has-over' : ''}`}>
           <span className="ps-cap">Осталось оплатить</span>
-          <span className="ps-amt">{money(remaining + overdueSum)}</span>
+          <span className="ps-amt">{money(remaining)}</span>
           {overdueSum > 0 && (
             <div className="ps-break">
               <span className="dot" />
@@ -94,15 +100,19 @@ export function Payments() {
               <span className="val">{money(overdueSum)}</span>
             </div>
           )}
-          {bills.length > 0 && (
+          {monthItems.length > 0 && (
             <span className="ps-meta">
-              оплачено {paidCount} из {bills.length} · {compact(paidSum)} из {compact(total)}
+              оплачено {paidCount} из {monthItems.length} · {compact(paidSum)} из {compact(total)}
             </span>
           )}
         </div>
 
-        {/* Просрочка прошлых месяцев — отдельным красным блоком, с галочками */}
-        <OverdueBlock items={overdueBills} onToggle={payOverdue} busy={setPaid.isPending} />
+        {/* Просрочка прошлых месяцев (платежи и долги) — красным блоком, с галочками */}
+        <OverdueBlock
+          items={overdueItems}
+          onToggle={payOverdue}
+          busy={setPaid.isPending || setDebtPaid.isPending}
+        />
 
         <button
           className="btn btn-primary"
@@ -112,48 +122,168 @@ export function Payments() {
           ＋ Платёж
         </button>
 
-        {isPending ? (
-          <SkeletonBlock rows={4} />
-        ) : isError ? (
-          <ErrorState onRetry={refetch} />
-        ) : bills.length === 0 ? (
-          <EmptyState
-            emoji="📅"
-            title="Платежей пока нет"
-            sub="Добавьте регулярный платёж — так его не пропустить"
-          />
+        {/* ① Обязательные платежи */}
+        <div className="pay-div"><span>Обязательные платежи</span></div>
+        {plan.isPending ? (
+          <SkeletonBlock rows={2} />
+        ) : plan.isError ? (
+          <ErrorState onRetry={plan.refetch} />
         ) : (
-          <div className="block bill-list">
-            {bills.map((b) => (
-              <div key={b.id} className={`bill-row${b.paid ? ' paid' : ''}`}>
-                <button
-                  className={`bill-check${b.paid ? ' on' : ''}`}
-                  onClick={() => toggle(b)}
-                  disabled={setPaid.isPending}
-                  aria-label={b.paid ? 'Снять отметку оплаты' : 'Отметить оплаченным'}
-                >
-                  {b.paid ? '✓' : ''}
-                </button>
-                <button className="bill-main" onClick={() => { haptic('light'); setEditing(b) }}>
-                  <div className="bill-mid">
-                    <div className="bill-title">
-                      {b.emoji ? `${b.emoji} ` : ''}{b.title}
-                    </div>
-                    <div className={`bill-meta${isOverdue(b) ? ' overdue' : ''}`}>
-                      {isOverdue(b) ? `просрочено · до ${b.dueDay} числа` : `до ${b.dueDay} числа`} · {b.categoryName}
-                    </div>
-                  </div>
-                  <div className="bill-amt">{money(b.amount)}</div>
-                </button>
-              </div>
+          <div className="cfv-wrap">
+            {segments.map((seg) => (
+              <PaymentTile key={seg.index} seg={seg} month={month} onEdit={editBill} />
             ))}
           </div>
         )}
+
+        {/* ② Долги */}
+        <div className="pay-div">
+          <span>Долги{debtItems.length > 0 && <em> · {debtItems.length}</em>}</span>
+        </div>
+        <DebtsBlock items={debtItems} onOpen={() => navigate('/debts')} />
+
+        {/* ③ Досрочное погашение кредитов */}
+        <div className="pay-div"><span>Досрочное погашение кредитов</span></div>
+        <PrepayBlock month={month} onOpenCredits={() => navigate('/credits')} />
       </div>
 
       {adding && <BillSheet onClose={() => setAdding(false)} />}
       {editing && <BillSheet bill={editing} onClose={() => setEditing(null)} />}
     </div>
+  )
+}
+
+/** Блок «Долги»: «я должен» со сроком в месяце. Чек-бокс вносит возврат на остаток. */
+function DebtsBlock({ items, onOpen }: { items: CashflowItem[]; onOpen: () => void }) {
+  const setDebtPaid = useSetDebtPaid()
+  if (items.length === 0) {
+    return (
+      <div className="block pay-empty">
+        <p>Долгов со сроком в этом месяце нет. Долги добавляются в разделе «Долги».</p>
+      </div>
+    )
+  }
+  const left = items.reduce((s, it) => s + (it.paid ? 0 : it.amount - it.paidAmount), 0)
+  return (
+    <div className="block bill-list">
+      <div className="pay-blk-head">
+        <span>Осталось вернуть</span>
+        <b>{money(left)}</b>
+      </div>
+      {items.map((it) => (
+        <div key={`debt-${it.id}`} className={`bill-row${it.paid ? ' paid' : ''}`}>
+          <button
+            className={`bill-check${it.paid ? ' on' : ''}`}
+            disabled={setDebtPaid.isPending}
+            onClick={() => {
+              haptic('medium')
+              setDebtPaid.mutate({ id: it.id, paid: !it.paid, amount: it.amount - it.paidAmount })
+            }}
+            aria-label={it.paid ? 'Снять отметку возврата' : 'Отметить возвращённым'}
+          >
+            {it.paid ? '✓' : ''}
+          </button>
+          <button className="bill-main" onClick={() => { haptic('light'); onOpen() }}>
+            <div className="bill-mid">
+              <div className="bill-title">🤝 {it.title}</div>
+              <div className={`bill-meta${it.overdue ? ' overdue' : ''}`}>
+                {it.paid
+                  ? `до ${it.day} числа · возвращён`
+                  : it.paidAmount > 0
+                    ? `возвращено ${money(it.paidAmount)} из ${money(it.amount)}`
+                    : `${it.overdue ? 'просрочено · ' : ''}до ${it.day} числа`}
+              </div>
+            </div>
+            <div className="bill-amt">{money(it.amount)}</div>
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Блок «Досрочное погашение кредитов»: фонд (рекомендуемая сумма) + факт за месяц + кредиты. */
+function PrepayBlock({ month, onOpenCredits }: { month: string; onOpenCredits: () => void }) {
+  const credits = useCredits(month)
+  const setClosed = useSetCreditClosed()
+  const [open, setOpen] = useState<Credit | null>(null)
+  const [armed, setArmed] = useState<number | null>(null)
+
+  const list = useMemo(
+    () =>
+      [...(credits.data?.items ?? [])].sort(
+        (a, b) => Number(a.isClosed) - Number(b.isClosed) || a.remaining - b.remaining || a.id - b.id,
+      ),
+    [credits.data],
+  )
+
+  if (credits.isPending) return <SkeletonBlock rows={2} />
+  if (credits.isError) return <ErrorState onRetry={credits.refetch} />
+  const data = credits.data
+
+  const toggle = (c: Credit) => {
+    if (c.isClosed && armed !== c.id) { setArmed(c.id); haptic('light'); return } // сброс факта — в два тапа
+    haptic('medium')
+    setArmed(null)
+    setClosed.mutate({ id: c.id, closed: !c.isClosed })
+  }
+
+  return (
+    <>
+      <div className="pp-fund">
+        <div>
+          <span className="pp-cap">Рекомендуемая сумма</span>
+          <span className="pp-big y">{money(data.fund)}</span>
+        </div>
+        <div className="pp-r">
+          <span className="pp-cap">Факт за месяц</span>
+          <span className={`pp-big${(data.monthPaid ?? 0) > 0 ? ' ok' : ''}`}>{money(data.monthPaid ?? 0)}</span>
+        </div>
+      </div>
+
+      {list.length === 0 ? (
+        <div className="block pay-empty">
+          <p>Кредитов пока нет. Добавьте их в разделе «Кредиты» — и здесь можно будет отмечать досрочные погашения.</p>
+          <button className="btn btn-secondary btn-sm" onClick={onOpenCredits}>Перейти в «Кредиты»</button>
+        </div>
+      ) : (
+        <div className="block bill-list">
+          {list.map((c) => (
+            <div key={c.id} className={`bill-row${c.isClosed ? ' paid' : ''}`}>
+              <button
+                className={`bill-check${c.isClosed ? ' on' : ''}${armed === c.id ? ' armed' : ''}`}
+                disabled={setClosed.isPending}
+                onClick={() => toggle(c)}
+                aria-label={c.isClosed ? 'Снять отметку «погашен»' : 'Отметить погашенным полностью'}
+              >
+                {c.isClosed ? '✓' : ''}
+              </button>
+              <button className="bill-main" onClick={() => { haptic('light'); setArmed(null); setOpen(c) }}>
+                <div className="bill-mid">
+                  <div className="bill-title">
+                    <span className={`cr-kind ${c.kind}`}>{c.kind === 'card' ? 'Кредитка' : 'Кредит'}</span>
+                    {c.bank}
+                  </div>
+                  <div className="bill-meta">
+                    {armed === c.id
+                      ? 'Нажмите галочку ещё раз — факт обнулится'
+                      : c.isClosed
+                        ? '✓ погашен полностью'
+                        : `тело ${money(c.amount)}${c.paid > 0 ? ` · осталось ${money(c.remaining)}` : ''}`}
+                  </div>
+                </div>
+                <div className="pp-fact">
+                  <small>Факт</small>
+                  {money(c.paid)}
+                </div>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {open && <CreditRepaymentSheet credit={open} onClose={() => setOpen(null)} />}
+    </>
   )
 }
 
