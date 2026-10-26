@@ -445,7 +445,11 @@ export interface CashflowIncome {
   group: string
   emoji: string | null
   day: number
+  /** Фактическая сумма, если деньги уже пришли, иначе плановая из бюджета. */
   amount: number
+  /** true — поступление уже было (amount фактический). */
+  actual?: boolean
+  plannedAmount?: number | null
 }
 
 /** Половина месяца (① до 15 / ② после 15): три цифры + детализация. */

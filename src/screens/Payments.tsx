@@ -220,6 +220,8 @@ function PrepayBlock({ month, onOpenCredits }: { month: string; onOpenCredits: (
   if (credits.isPending) return <SkeletonBlock rows={2} />
   if (credits.isError) return <ErrorState onRetry={credits.refetch} />
   const data = credits.data
+  const monthPaid = data.monthPaid ?? 0
+  const fundLeft = data.fund - monthPaid
 
   const toggle = (c: Credit) => {
     if (c.isClosed && armed !== c.id) { setArmed(c.id); haptic('light'); return } // сброс факта — в два тапа
@@ -240,6 +242,16 @@ function PrepayBlock({ month, onOpenCredits }: { month: string; onOpenCredits: (
           <span className={`pp-big${(data.monthPaid ?? 0) > 0 ? ' ok' : ''}`}>{money(data.monthPaid ?? 0)}</span>
         </div>
       </div>
+
+      {monthPaid > 0 && (
+        <div className="pp-left">
+          <span className="pp-cap">Остаток от фонда</span>
+          <span className={`pp-left-v${fundLeft <= 0 ? ' zero' : ''}`}>
+            {money(Math.max(0, fundLeft))}
+            {fundLeft < 0 && <small> · сверх фонда +{money(-fundLeft)}</small>}
+          </span>
+        </div>
+      )}
 
       {list.length === 0 ? (
         <div className="block pay-empty">

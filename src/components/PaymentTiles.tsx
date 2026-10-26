@@ -27,7 +27,9 @@ export function PaymentTile({
   const obligations = items.reduce((s, it) => s + it.amount, 0)
   const paid = items.filter((it) => it.paid).reduce((s, it) => s + it.amount, 0)
   const leftToPay = Math.max(0, obligations - paid)
-  const coverage = seg.expectedIncome - obligations
+  // «К оплате» — только то, что ещё не оплачено; «Останется» = приход − неоплаченное.
+  const coverage = seg.expectedIncome - leftToPay
+  const allIncomeActual = seg.incomes.length > 0 && seg.incomes.every((i) => i.actual)
   const restPos = coverage >= 0
   const showProgress = paid > 0
   const allPaid = paid > 0 && leftToPay === 0
@@ -46,12 +48,12 @@ export function PaymentTile({
         </div>
         <div className="cfv-kpis">
           <div className="cfv-kpi">
-            <div className="cfv-k">Придёт</div>
+            <div className="cfv-k">{allIncomeActual ? 'Пришло' : 'Придёт'}</div>
             <div className="cfv-v inc">{compact(seg.expectedIncome)}</div>
           </div>
           <div className="cfv-kpi">
             <div className="cfv-k">К оплате</div>
-            <div className="cfv-v">{compact(obligations)}</div>
+            <div className="cfv-v">{compact(leftToPay)}</div>
           </div>
           <div className={`cfv-kpi rest ${restPos ? 'pos' : 'neg'}`}>
             <div className="cfv-k">Останется</div>
@@ -86,7 +88,7 @@ export function PaymentTile({
                     {seg.incomes.map((i, idx) => (
                       <div className="cfv-row inc" key={`inc-${idx}`}>
                         <span className="cfv-em">{i.emoji ?? '💰'}</span>
-                        <span className="cfv-nm"><b>{i.name}</b><small>{i.day} числа</small></span>
+                        <span className="cfv-nm"><b>{i.name}</b><small>{i.day} числа · {i.actual ? 'получено' : 'план'}</small></span>
                         <span className="cfv-amt">+{money(i.amount)}</span>
                       </div>
                     ))}
